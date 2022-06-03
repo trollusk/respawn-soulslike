@@ -56,7 +56,7 @@ float bootsPenalty = 0.0
 float amuletPenalty = 0.0
 float ringPenalty = 0.0
 float inventoryPenalty = 0.0
-bool excludeCreatures = true
+bool excludeCreatures = false
 float property _weaponPenalty auto
 float property _shieldPenalty auto
 float property _helmPenalty auto
@@ -103,6 +103,20 @@ int iDiabloMode
 int iRecommendedMode
 
 int iUninstall
+
+bool lastBed = false
+bool property _lastBed auto
+int iLastBed
+
+bool resetEnemies = false
+bool property _resetEnemies auto
+int iResetEnemies
+
+bool preventGoldStorage = false
+bool property _preventGoldStorage auto
+int iPreventGoldStorage
+
+ObjectReference Property PlayerRespawnMarker  Auto  
 
 
 Event OnConfigInit()
@@ -164,10 +178,15 @@ Event OnConfigInit()
 	
 	_dragonSoulsLost = dragonSoulsLost
 	
+	_lastBed = lastBed
+	_preventGoldStorage = preventGoldStorage
+	_resetEnemies = resetEnemies
+
 EndEvent
 
 Event OnPageReset(string page)
 	If (page == "Respawn Locations")
+		Cell markerCell = PlayerRespawnMarker.GetParentCell()
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		
 		AddHeaderOption("Respawn Locations")
@@ -176,6 +195,8 @@ Event OnPageReset(string page)
 		iNearestHome = AddToggleOption("Nearest home", nearestHome)
 		iRespawnDelay = AddSliderOption("Respawn delay (s)", respawnDelay)
 		
+		iLastBed = AddToggleOption("Last Bed  (" + markerCell.GetName() + ")", lastBed)
+
 		;AddHeaderOption("Push key")
 		;iPushKey = AddKeyMapOption("Push key", pushKey)
 	ElseIf (page == ("Inventory Penalties"))
@@ -183,6 +204,7 @@ Event OnPageReset(string page)
 		AddHeaderOption("Gold Penalty")
 		iGoldPenaltyMin = AddSliderOption("Min gold penalty", goldPenaltyMin)
 		iGoldPenaltyMax = AddSliderOption("Max gold penalty", goldPenaltyMax)
+		iPreventGoldStorage = AddToggleOption("Prevent Gold Storage", preventGoldStorage)
 		
 		AddHeaderOption("Inventory Penalty")
 		iWeaponPenalty = AddSliderOption("Lose equipped LHand %", weaponPenalty)
@@ -214,17 +236,30 @@ Event OnPageReset(string page)
 		
 		AddHeaderOption("Dragon souls")
 		iDragonSoulsLost = AddSliderOption("Dragon souls lost", dragonSoulsLost)
+
 	ElseIf (page == ("Save Settings"))
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		iDisableSaves = AddToggleOption("Disable Quicksaving", disableSaves)
 	ElseIf (page == ("Modes"))
+		Actor npc = (Game.GetCurrentCrosshairRef() as Actor)
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		iRecommendedMode = AddToggleOption("Set Recommended Presets", false)
 		iDiabloMode = AddToggleOption("Diablo Mode", diabloMode)
+		iResetEnemies = AddToggleOption("Reset Nearby Non-Boss Enemies", resetEnemies)
+		if (npc)
+			AddTextOption("Targeted NPC", npc.GetName(), OPTION_FLAG_DISABLED)
+			AddTextOption("Unique?", (npc.GetBaseObject() as ActorBase).IsUnique(), OPTION_FLAG_DISABLED)
+			AddTextOption("Boss Keyword?", npc.HasRefType(locRefTypeBoss), OPTION_FLAG_DISABLED)
+			AddTextOption("DLC2Boss1 Keyword?", npc.HasRefType(locRefTypeDLC2Boss1), OPTION_FLAG_DISABLED)
+			AddTextOption("Hostile to player?", npc.IsHostileToActor(Game.GetPlayer()), OPTION_FLAG_DISABLED)
+			AddTextOption("Player teammate?", npc.IsPlayerTeammate(), OPTION_FLAG_DISABLED)
+		endif
 	ElseIf(page == "Uninstall")
 		iUninstall = AddToggleOption("Uninstall mod", false)
 	EndIf
 EndEvent
+
+
 
 Event OnOptionSelect(int option)
 	if (CurrentPage == "Respawn Locations")
@@ -239,6 +274,9 @@ Event OnOptionSelect(int option)
 				_nearestHome = false
 				SetToggleOptionValue(iNearestHold, false)
 				SetToggleOptionValue(iNearestHome, false)
+				lastBed = false
+				_lastBed = false
+				SetToggleOptionValue(iLastBed, false)
 			EndIf
 		ElseIf (option == iNearestHold)
 			nearestHold = !nearestHold
@@ -248,6 +286,9 @@ Event OnOptionSelect(int option)
 				onlyTemple = false
 				_onlyTemple = false
 				SetToggleOptionValue(iOnlyTemple, false)
+				lastBed = false
+				_lastBed = false
+				SetToggleOptionValue(iLastBed, false)
 			EndIf
 		ElseIf (option == iNearestHome)
 			nearestHome = !nearestHome
@@ -257,6 +298,24 @@ Event OnOptionSelect(int option)
 				onlyTemple = false
 				_onlyTemple = false
 				SetToggleOptionValue(iOnlyTemple, false)
+				lastBed = false
+				_lastBed = false
+				SetToggleOptionValue(iLastBed, false)
+			EndIf
+		ElseIf (option == iLastBed)
+			lastBed = !lastBed
+			SetToggleOptionValue(iLastBed, lastBed)
+			_lastBed = lastBed
+			if (lastBed == true)
+				onlyTemple = false
+				_onlyTemple = false
+				SetToggleOptionValue(iOnlyTemple, false)
+				nearestHold = false
+				_nearestHold = false
+				nearestHome = false
+				_nearestHome = false
+				SetToggleOptionValue(iNearestHold, false)
+				SetToggleOptionValue(iNearestHome, false)
 			EndIf
 		EndIf
 	ElseIf (CurrentPage == "Inventory Penalties")
@@ -264,6 +323,10 @@ Event OnOptionSelect(int option)
 			excludeCreatures = !excludeCreatures
 			_excludeCreatures = excludeCreatures
 			SetToggleOptionValue(iExcludeCreatures, excludeCreatures)
+		elseif (option == iPreventGoldStorage)
+			preventGoldStorage = !preventGoldStorage
+			_preventGoldStorage = preventGoldStorage
+			SetToggleOptionValue(iPreventGoldStorage, preventGoldStorage)
 		EndIf
 	ElseIf (CurrentPage == "EXP Penalties")
 		if (option == iExpPenaltyPercent10)
@@ -453,34 +516,41 @@ Event OnOptionSelect(int option)
 				_goldPenaltyMax = 100
 				SetSliderOptionValue(iGoldPenaltyMin, 100)
 				SetSliderOptionValue(iGoldPenaltyMax, 100)
-				weaponPenalty = 100
-				shieldPenalty = 100
-				helmPenalty = 100
-				armorPenalty = 100
-				glovesPenalty = 100
-				bootsPenalty = 100
-				ringPenalty = 100
-				amuletPenalty = 100
+				weaponPenalty = 0	;100
+				shieldPenalty = 0	;100
+				helmPenalty = 0		;100
+				armorPenalty = 0	;100
+				glovesPenalty = 0	;100
+				bootsPenalty = 0	
+				ringPenalty = 0
+				amuletPenalty = 0
 				inventoryPenalty = 0
-				_weaponPenalty = 100
-				_shieldPenalty = 100
-				_helmPenalty = 100
-				_armorPenalty = 100
-				_glovesPenalty = 100
-				_bootsPenalty = 100
-				_ringPenalty = 100
-				_amuletPenalty = 100
+				_weaponPenalty = 0
+				_shieldPenalty = 0
+				_helmPenalty = 0
+				_armorPenalty = 0
+				_glovesPenalty = 0
+				_bootsPenalty = 0
+				_ringPenalty = 0
+				_amuletPenalty = 0
 				_inventoryPenalty = 0
-				SetSliderOptionValue(iWeaponPenalty, 100)
-				SetSliderOptionValue(iShieldPenalty, 100)
-				SetSliderOptionValue(iHelmPenalty, 100)
-				SetSliderOptionValue(iArmorPenalty, 100)
-				SetSliderOptionValue(iGlovesPenalty, 100)
-				SetSliderOptionValue(iBootsPenalty, 100)
-				SetSliderOptionValue(iRingPenalty, 100)
-				SetSliderOptionValue(iAmuletPenalty, 100)
+				SetSliderOptionValue(iWeaponPenalty, 0)
+				SetSliderOptionValue(iShieldPenalty, 0)
+				SetSliderOptionValue(iHelmPenalty, 0)
+				SetSliderOptionValue(iArmorPenalty, 0)
+				SetSliderOptionValue(iGlovesPenalty, 0)
+				SetSliderOptionValue(iBootsPenalty, 0)
+				SetSliderOptionValue(iRingPenalty, 0)
+				SetSliderOptionValue(iAmuletPenalty, 0)
 				SetSliderOptionValue(iInventoryPenalty, 0)
+				_dragonSoulsLost = 0
+				dragonSoulsLost = 0
+				SetSliderOptionValue(iDragonSoulsLost, 0)
 			EndIf
+		elseif (option == iResetEnemies)
+			resetEnemies = !resetEnemies
+			_resetEnemies = resetEnemies
+			SetToggleOptionValue(iResetEnemies, resetEnemies)			
 		ElseIf (option == iRecommendedMode)
 			recommendedMode = ShowMessage("Set recommended presets?", true)
 			SetToggleOptionValue(iRecommendedMode, recommendedMode)
@@ -736,6 +806,8 @@ Event OnOptionHighlight(int option)
 		SetInfoText("Will not lose exp in smithing, alchemy, enchanting, lockpicking, pickpocket, and speechcraft")
 	ElseIf (option == iExcludeCreatures)
 		SetInfoText("Animals and creatures will not take your gear and gold. EXP penalties will still apply.")
+	ElseIf (option == iLastBed)
+		SetInfoText("All deaths in Tamriel will have you respawn at the last bed you slept in.")
 	ElseIf (option == iDisableSaves)
 		SetInfoText("Disables quick saving. Auto-saves and Manual saves via menu are still available.")
 	ElseIf (option == iOnlyTemple)
@@ -750,5 +822,13 @@ Event OnOptionHighlight(int option)
 		SetInfoText("Emulates Diablo 2's death system: An ashpile will be left at the player's location when defeated and all equipped items and gold will be transferred into the ashpile. This may be a safer option if you're worried about your killers running off with your items. WARNING: This resets your inventory penalty settings to match a preset.")
 	ElseIf (option == respawnDelay)
 		SetInfoText("Seconds to wait until respawn functions run. Use this if you have other mods with death effects installed and you run them to run first. Note this doesn't work 100% of the time because bleedout state for player is quite gimmicky.")
+	ElseIf (option == iResetEnemies)
+		SetInfoText("All hostile non-boss NPCs in the cell will be resurrected and reset to their starting positions when the player dies.")
+	ElseIf (option == iPreventGoldStorage)
+		SetInfoText("Prevents the player from storing gold in containers or follower inventories, to increase the risk associated with dropping gold on death.")
 	EndIf
 EndEvent
+
+
+LocationRefType property locRefTypeBoss auto
+LocationRefType property locRefTypeDLC2Boss1 auto
