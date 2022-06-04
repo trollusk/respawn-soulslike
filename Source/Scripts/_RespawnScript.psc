@@ -966,7 +966,7 @@ Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectR
 			debug.Notification("Destination is not actor or container: " + dest)
 		endif
 	else
-		debug.Notification("Gold Is XP is not set to prevent gold storage.")
+		debug.Notification("Respawn mod is not set to prevent gold storage.")
 	endif
 EndEvent
 
@@ -1030,7 +1030,7 @@ Function PlaceCampfireMapMarker(bool playerBuilt = false)
 	if (player.IsInInterior())
 		Debug.Notification("Cannot place marker in interior cells.")
 		return
-	elseif (campfireMarkerNextAvailable >= campfireMarkerList.GetSize())
+	elseif (!playerBuilt && campfireMarkerNextAvailable >= campfireMarkerList.GetSize())
 		debug.Notification("Out of campfire map markers.")
 		return
 	elseif (Game.FindClosestReferenceOfTypeFromRef((campfireMarkerList.GetAt(0) as ObjectReference).GetBaseObject(), player, 200.0))
