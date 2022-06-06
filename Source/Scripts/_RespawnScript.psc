@@ -114,7 +114,7 @@ Event OnPlayerLoadGame()
 	PopulateNamedBossList()
 	
 	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
-		debug.notification("PlayerRespawnMarker not initialized, moving to player...")
+		;debug.notification("PlayerRespawnMarker not initialized, moving to player...")
 		PlayerRespawnMarker.moveto(player)
 		playerRespawnMarkerInitialized = true
 	endif
@@ -546,7 +546,7 @@ Function SetAshPile()
     if (mcmOptions._diabloMode)
         if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
             ; XXX hide and delete any existing ash pile
-            if (old_deathmarker)
+            if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
                 old_deathmarker.Disable()
             Endif
             deathMarker = player.PlaceActorAtMe(old_deathmarker.GetActorBase())
@@ -555,7 +555,9 @@ Function SetAshPile()
             deathMarker.SetAlpha(0, false)
             deathMarker.KillEssential()
             lastEnemy = deathMarker
-			old_deathmarker.Delete()
+            if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
+                old_deathmarker.Delete()
+            Endif
         EndIf
     EndIf
 EndFunction
@@ -576,7 +578,6 @@ Function RemoveGold()
     EndIf
 EndFunction
 
-; XXX stop gear being occasionally removed even if chance was set to 0
 
 Function RemoveGear()
     if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
@@ -743,27 +744,27 @@ EndFunction
 Function ResetEnemiesInCell()
 	Actor[] npcs = MiscUtil.ScanCellNPCs(player, 0.0, IgnoreDead=false)
 	int npcIndex = 0
-	debug.notification("ResetNPCs: found " + npcs.Length + " NPCs in cell")
+	;debug.notification("ResetNPCs: found " + npcs.Length + " NPCs in cell")
 	while (npcIndex < npcs.Length)
 		Actor npc = npcs[npcIndex]
 		if (npc == deathMarker || npc == player)
-			debug.notification("ResetNPCs: player or deathmarker - ignore: " + npc)
+			;debug.notification("ResetNPCs: player or deathmarker - ignore: " + npc)
 		Elseif (npc.IsPlayerTeammate())
-			debug.notification("ResetNPCs: follower - ignore: " + npc)
+			;debug.notification("ResetNPCs: follower - ignore: " + npc)
 			; ?or if npc.GetRelationshipRank(player) > 0
 			npc.ResetHealthAndLimbs()
 		Elseif (IsBoss(npc) || (npc.GetBaseObject() as ActorBase).IsUnique())
 			; reset bosses and "unique" npcs, unless they are dead
 			if (!(npc.IsDead()))
-				debug.notification("ResetNPCs: boss and not dead - RESET: " + npc)
+				;debug.notification("ResetNPCs: boss and not dead - RESET: " + npc)
 				ResetEnemy(npc)
 				Utility.Wait(0.1)
 			else
-				debug.notification("ResetNPCs: dead boss - ignore: " + npc)
+				;debug.notification("ResetNPCs: dead boss - ignore: " + npc)
 			endif
 		Else
 			; non-boss NPC
-			debug.notification("ResetNPCs: non-boss NPC - RESET: " + npc)
+			;debug.notification("ResetNPCs: non-boss NPC - RESET: " + npc)
 			;npc.Reset()
 			;Utility.Wait(0.1)
 			if (npc.IsDead())
@@ -924,7 +925,7 @@ Event OnLocationChange(Location oldLoc, Location newLoc)
 	; if PlayerMarker in starting "Elsweyr" cell then move it to player
 	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
 		; respawn marker is still in default cell (Elsweyr)
-		debug.notification("PlayerRespawnMarker moved to player")
+		;debug.notification("PlayerRespawnMarker moved to player")
 		PlayerRespawnMarker.moveto(player)
 		playerRespawnMarkerInitialized = true
 	endif
@@ -936,10 +937,10 @@ EndEvent
 ; dest.IsInFaction(MerchantFaction) >= 0
 ; dest.IsPlayerTeammate()
 Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectReference dest)
-	debug.Notification("Trying to remove gold from player...")
+	;debug.Notification("Trying to remove gold from player...")
 	if (mcmOptions._preventGoldStorage)
 		if (!dest)
-			debug.Notification("Destination is empty, so allow.")
+			;debug.Notification("Destination is empty, so allow.")
 			; do nothing - gold was "consumed"
 		elseif (dest as Actor)
 			if ((dest as Actor).IsPlayerTeammate())
@@ -950,23 +951,23 @@ Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectR
 				dest.RemoveItem(item, count, false, Game.GetPlayer())
 			else
 				;Not clear how this would arise
-				debug.Notification("Destination actor is not follower - allow")
+				;debug.Notification("Destination actor is not follower - allow")
 			endif
 		elseif (dest.GetBaseObject() as Container)
 			if (UI.isMenuOpen("BarterMenu"))
 				; when trading with merchants, the player actually interacts with the
 				; merchant's owned container
-				debug.Notification("Destination is merchant's container (bartermenu) - allow")
+				;debug.Notification("Destination is merchant's container (bartermenu) - allow")
 			else
 				; move it back
 				debug.Notification("You are not allowed to store gold in containers.")
 				dest.RemoveItem(item, count, false, Game.GetPlayer())
 			endif
 		else	
-			debug.Notification("Destination is not actor or container: " + dest)
+			debug.Notification("Gold destination is not actor or container: " + dest)
 		endif
 	else
-		debug.Notification("Respawn mod is not set to prevent gold storage.")
+		;debug.Notification("Respawn mod is not set to prevent gold storage.")
 	endif
 EndEvent
 
@@ -974,8 +975,8 @@ EndEvent
 Event OnSit(ObjectReference furn)
 	int furnID = Math.LogicalAnd(furn.GetBaseObject().GetFormID(), 0x0FFFFF)
 	
-	debug.Notification("~Sitting on base type = " + furnID + " " + furn.GetBaseObject().GetName())
-	debug.Notification("Furn ID = " + furnID)
+	;debug.Notification("Sitting on base type = " + furnID + " " + furn.GetBaseObject().GetName())
+	;debug.Notification("Furn ID = " + furnID)
 	
 	if (Game.GetModByName("DSMenuCampfire.esp") != 255)
 		; remove first 2 hex digits from formID when using with GetFormFromFile
@@ -984,20 +985,16 @@ Event OnSit(ObjectReference furn)
 		int fireID3 = 0
 		
 		if ((furnID == fireID1) || (furnID == fireID2))
-			debug.Notification("Sitting at campfire! (DSMenuCampfire.esp)")
-			PlayerRespawnMarker.moveto(player)
-			playerRespawnMarkerInitialized = true
-			PlaceCampfireMapMarker()
+			;debug.Notification("Sitting at campfire! (DSMenuCampfire.esp)")
+			PlaceRespawnMarkerAtCampfire()
 			return
 		elseif (Game.GetModByName("SBM-Campfire Patch.esp") != 255)
 			fireID1 = 0x39577
 			fireID2 = 0x536e7
 			fireID3 = 0x7bea2
 			if ((furnID == fireID1) || (furnID == fireID2) || (furnID == fireID3))
-				debug.Notification("Sitting at campfire! (SBM-Campfire Patch.esp)")
-				PlayerRespawnMarker.moveto(player)
-				playerRespawnMarkerInitialized = true
-				PlaceCampfireMapMarker()
+				;debug.Notification("Sitting at campfire! (SBM-Campfire Patch.esp)")
+				PlaceRespawnMarkerAtCampfire()
 				return
 			endif
 		endif
@@ -1008,17 +1005,22 @@ Event OnSit(ObjectReference furn)
 		int fireID2 = 0x536e7
 		int fireID3 = 0x7bea2
 		if ((furnID == fireID1) || (furnID == fireID2) || (furnID == fireID3))
-			debug.Notification("Sitting at campfire! (Campfire.esm)")
-			PlayerRespawnMarker.moveto(player)
-			playerRespawnMarkerInitialized = true
-			PlaceCampfireMapMarker()
+			;debug.Notification("Sitting at campfire! (Campfire.esm)")
+			PlaceRespawnMarkerAtCampfire()
 			return
 		endif
 	endif
-	debug.Notification("No campfire detected")
+	;debug.Notification("No campfire detected")
 	
 EndEvent
 
+
+Function PlaceRespawnMarkerAtCampfire()
+	PlayerRespawnMarker.moveto(player)
+	playerRespawnMarkerInitialized = true
+	debug.Notification("You will respawn at this campfire if you are killed.")
+	PlaceCampfireMapMarker()
+EndFunction
 
 
 ; MapMarker refs cannot be created at runtime.
@@ -1028,35 +1030,32 @@ EndEvent
 Function PlaceCampfireMapMarker(bool playerBuilt = false)
 
 	if (player.IsInInterior())
-		Debug.Notification("Cannot place marker in interior cells.")
-		return
-	elseif (!playerBuilt && campfireMarkerNextAvailable >= campfireMarkerList.GetSize())
-		debug.Notification("Out of campfire map markers.")
+		;Debug.Notification("Cannot place marker in interior cells.")
 		return
 	elseif (Game.FindClosestReferenceOfTypeFromRef((campfireMarkerList.GetAt(0) as ObjectReference).GetBaseObject(), player, 200.0))
-		debug.Notification("There's already a map marker nearby.")
+		;debug.Notification("There's already a map marker nearby.")
 		return
 	else
 		ObjectReference marker
+		if (!playerBuilt && campfireMarkerNextAvailable >= campfireMarkerList.GetSize())
+			; start reusing old markers
+			campfireMarkerNextAvailable = 0
+		endif
 		if (playerBuilt)
 			marker = playerBuiltCampfireMarker
 		else
 			marker = (campfireMarkerList.GetAt(campfireMarkerNextAvailable) as ObjectReference)
+			campfireMarkerNextAvailable += 1
 		endif
 		
 		if (!marker)
-			debug.Notification("Could not get marker!")
+			;debug.Notification("Could not get marker!")
 		else
-			debug.Notification("Moving marker " + campfireMarkerNextAvailable + " to player: " + marker)
-			if (!playerBuilt)
-				campfireMarkerNextAvailable += 1
-			endif
+			;debug.Notification("Moving marker " + campfireMarkerNextAvailable + " to player: " + marker)
 			marker.moveto(player) 
-			marker.SetDisplayName("Campfire - '" + player.GetParentCell().GetName() + "'")
+			marker.SetDisplayName("Campfire - '" + player.GetParentCell().GetName() + "'")		; doesn't seem to work
 			marker.Enable()
 			marker.AddToMap(true)
 		endif
 	endif
-	;marker.AddToMap(true)
-	;return
 EndFunction

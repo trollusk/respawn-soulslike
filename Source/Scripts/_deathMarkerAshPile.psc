@@ -26,19 +26,19 @@ Quest Property deathMarkerQuest Auto
 
 
 Event OnInit()
-    deathMarkerQuest = Quest.GetQuest("_RespawnDeathMarkerQuest")
+    ;deathMarkerQuest = Quest.GetQuest("_RespawnDeathMarkerQuest")
 	AshPileObject = RespawnAshPile
 EndEvent
 
 
 Event OnPlayerLoadGame()
-    deathMarkerQuest = Quest.GetQuest("_RespawnDeathMarkerQuest")
+    ;deathMarkerQuest = Quest.GetQuest("_RespawnDeathMarkerQuest")
 	AshPileObject = RespawnAshPile
 EndEvent
 
 
 Event OnDeath(Actor Killer)
-		; xxx (re)activate the death marker quest, allowing player to locate the grave
+		; (re)activate the death marker quest, allowing player to locate the grave
 		deathMarkerQuest.Stop()
 		(deathMarkerQuest.GetAliasByName("DeathMarkerRef") as ReferenceAlias).ForceRefTo(self)
 		utility.wait(0.1)    

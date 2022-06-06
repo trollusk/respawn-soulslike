@@ -6,20 +6,31 @@ bool property _enableMod auto
 bool enableMod = true
 int pushKey
 int property _pushKey auto
+
 bool disableSaves = false
 bool property _disableSaves auto
 bool property _diabloMode auto
 bool property _recommendedMode auto
-bool diabloMode = false
-bool recommendedMode = false
+bool property _destroyAshpileOnDeath auto
+bool property _resetEnemies auto
+bool property _preventGoldStorage auto
 
-bool onlyTemple = true
+bool destroyAshpileOnDeath = true
+bool diabloMode = true
+bool recommendedMode = false
+bool resetEnemies = false
+bool preventGoldStorage = false
+
+bool onlyTemple = false
 bool nearestHold = false
 bool nearestHome = false
+bool lastBed = true
 
 bool property _onlyTemple auto
 bool property _nearestHold auto
 bool property _nearestHome auto
+bool property _lastBed auto
+
 float property _respawnDelay auto
 float respawnDelay
 
@@ -103,20 +114,14 @@ int iDiabloMode
 int iRecommendedMode
 
 int iUninstall
-
-bool lastBed = false
-bool property _lastBed auto
 int iLastBed
-
-bool resetEnemies = false
-bool property _resetEnemies auto
 int iResetEnemies
-
-bool preventGoldStorage = false
-bool property _preventGoldStorage auto
 int iPreventGoldStorage
+int iDestroyAshpileOnDeath
 
 ObjectReference Property PlayerRespawnMarker  Auto  
+LocationRefType property locRefTypeBoss auto
+LocationRefType property locRefTypeDLC2Boss1 auto
 
 
 Event OnConfigInit()
@@ -181,7 +186,8 @@ Event OnConfigInit()
 	_lastBed = lastBed
 	_preventGoldStorage = preventGoldStorage
 	_resetEnemies = resetEnemies
-
+	_destroyAshpileOnDeath = destroyAshpileOnDeath
+	
 EndEvent
 
 Event OnPageReset(string page)
@@ -245,6 +251,7 @@ Event OnPageReset(string page)
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		iRecommendedMode = AddToggleOption("Set Recommended Presets", false)
 		iDiabloMode = AddToggleOption("Diablo Mode", diabloMode)
+		iDestroyAshpileOnDeath = AddToggleOption("Destroy ashpile on death", destroyAshpileOnDeath)
 		iResetEnemies = AddToggleOption("Reset Nearby Non-Boss Enemies", resetEnemies)
 		if (npc)
 			AddTextOption("Targeted NPC", npc.GetName(), OPTION_FLAG_DISABLED)
@@ -547,6 +554,10 @@ Event OnOptionSelect(int option)
 				dragonSoulsLost = 0
 				SetSliderOptionValue(iDragonSoulsLost, 0)
 			EndIf
+		elseif (option == iDestroyAshpileOnDeath)
+			destroyAshpileOnDeath = !destroyAshpileOnDeath
+			_destroyAshpileOnDeath = destroyAshpileOnDeath
+			SetToggleOptionValue(iDestroyAshpileOnDeath, destroyAshpileOnDeath)			
 		elseif (option == iResetEnemies)
 			resetEnemies = !resetEnemies
 			_resetEnemies = resetEnemies
@@ -556,14 +567,16 @@ Event OnOptionSelect(int option)
 			SetToggleOptionValue(iRecommendedMode, recommendedMode)
 			if (recommendedMode)
 				_onlyTemple = false
-				_nearestHold = true
-				_nearestHome = true
+				_nearestHold = false
+				_nearestHome = false
+				_lastBed = true
 				onlyTemple = false
-				nearestHold = true
-				nearestHome = true
+				nearestHold = false
+				nearestHome = false
+				lastBed = true
 				SetToggleOptionValue(iOnlyTemple, false)
-				SetToggleOptionValue(iNearestHold, true)
-				SetToggleOptionValue(iNearestHome, true)
+				SetToggleOptionValue(iNearestHold, false)
+				SetToggleOptionValue(iNearestHome, false)
 				goldPenaltyMin = 100
 				goldPenaltyMax = 100
 				_goldPenaltyMin = 100
@@ -578,7 +591,7 @@ Event OnOptionSelect(int option)
 				bootsPenalty = 0
 				amuletPenalty = 0
 				ringPenalty = 0
-				inventoryPenalty = 100
+				inventoryPenalty = 0
 				_weaponPenalty = 0
 				_shieldPenalty = 0
 				_helmPenalty = 0
@@ -587,7 +600,7 @@ Event OnOptionSelect(int option)
 				_bootsPenalty = 0
 				_amuletPenalty = 0
 				_ringPenalty = 0
-				_inventoryPenalty = 100
+				_inventoryPenalty = 0
 				SetSliderOptionValue(iWeaponPenalty, 0)
 				SetSliderOptionValue(iShieldPenalty, 0)
 				SetSliderOptionValue(iHelmPenalty, 0)
@@ -596,7 +609,7 @@ Event OnOptionSelect(int option)
 				SetSliderOptionValue(iBootsPenalty, 0)
 				SetSliderOptionValue(iRingPenalty, 0)
 				SetSliderOptionValue(iAmuletPenalty, 0)
-				SetSliderOptionValue(iInventoryPenalty, 100)
+				SetSliderOptionValue(iInventoryPenalty, 0)
 				expPenalty10 = false
 				expPenalty25 = true
 				expPenalty50 = false
@@ -622,9 +635,15 @@ Event OnOptionSelect(int option)
 				_dragonSoulsLost = 1
 				dragonSoulsLost = 1
 				SetSliderOptionValue(iDragonSoulsLost, 1)
-				SetToggleOptionValue(iDiabloMode, false)
-				diabloMode = false
-				_diabloMode = false
+				SetToggleOptionValue(iDiabloMode, true)
+				diabloMode = true
+				_diabloMode = true
+				_resetEnemies = false
+				resetEnemies = false
+				_destroyAshpileOnDeath = true
+				destroyAshpileOnDeath = true
+				_preventGoldStorage = false
+				preventGoldStorage = false
 			EndIf
 		EndIf
 	ElseIf (CurrentPage == "Uninstall")
@@ -820,15 +839,15 @@ Event OnOptionHighlight(int option)
 		SetInfoText("Deaths will see the player forfeit their entire inventory to the person who defeated them. They will hold on to the items so you can seek them out for a rematch and get your items back. Quest items should be unaffected.")
 	ElseIf (option == iDiabloMode)
 		SetInfoText("Emulates Diablo 2's death system: An ashpile will be left at the player's location when defeated and all equipped items and gold will be transferred into the ashpile. This may be a safer option if you're worried about your killers running off with your items. WARNING: This resets your inventory penalty settings to match a preset.")
+	ElseIf (option == iDestroyAshpileOnDeath)
+		SetInfoText("(Diablo Mode only) When the player is defeated, any previously created ashpile is destroyed, along with its contents.")
 	ElseIf (option == respawnDelay)
 		SetInfoText("Seconds to wait until respawn functions run. Use this if you have other mods with death effects installed and you run them to run first. Note this doesn't work 100% of the time because bleedout state for player is quite gimmicky.")
 	ElseIf (option == iResetEnemies)
-		SetInfoText("All hostile non-boss NPCs in the cell will be resurrected and reset to their starting positions when the player dies.")
+		SetInfoText("If the player is defeated and the current location has not been 'cleared', all hostile non-boss NPCs in the cell will be resurrected, healed and reset to their starting positions. Boss NPCs are also healed and reset if they are still alive.")
 	ElseIf (option == iPreventGoldStorage)
-		SetInfoText("Prevents the player from storing gold in containers or follower inventories, to increase the risk associated with dropping gold on death.")
+		SetInfoText("Prevent the player from storing gold in containers, corpses or follower inventories. The only ways to lose gold are by spending it or being defeated.")
 	EndIf
 EndEvent
 
 
-LocationRefType property locRefTypeBoss auto
-LocationRefType property locRefTypeDLC2Boss1 auto
