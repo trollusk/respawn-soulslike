@@ -155,6 +155,12 @@ Event OnUpdate()
     Game.SetInChargen(false, false, true)
 EndEvent
 
+
+Event OnDying(Actor killer)
+    debug.notification("Player dying, killer = " + killer)
+EndEvent
+
+
 Event OnEnterBleedout()
     player.SetNoBleedoutRecovery(true)
     ; Make exceptions for brawls
