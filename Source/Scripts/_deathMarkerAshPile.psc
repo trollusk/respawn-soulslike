@@ -74,6 +74,21 @@ Event OnActivate(ObjectReference opener)
 		deathMarkerQuest.SetStage(20)
 		deathMarkerQuest.CompleteQuest()
 		deathMarkerQuest.SetObjectiveDisplayed(10,false)
-		self.Disable(true)
+		;self.Disable(true)
 	Endif
 EndEvent
+
+
+; If player is taking items from their grave, then check if the grave is empty,
+; and if so delete it.
+
+Event OnItemRemoved(Form base, int count, ObjectReference itemRef, ObjectReference dest)
+    if dest == Game.GetPlayer()
+        debug.notification("Item added to player inventory from grave")
+        if self.GetNumItems() == 0
+            debug.notification("Grave is empty, disabling")
+            self.Disable(true)
+        endif
+    endif
+EndEvent
+
