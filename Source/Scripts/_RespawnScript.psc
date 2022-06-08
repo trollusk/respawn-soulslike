@@ -932,16 +932,16 @@ Event OnSleepStart(float afSleepStartTime, float afDesiredSleepEndTime)
 EndEvent
 
 
-Event OnLocationChange(Location oldLoc, Location newLoc)
-	; debug.notification("Player moved to new location: " + newLoc)
-	; if PlayerMarker in starting "Elsweyr" cell then move it to player
-	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
-		; respawn marker is still in default cell (Elsweyr)
-		;debug.notification("PlayerRespawnMarker moved to player")
-		PlayerRespawnMarker.moveto(player)
-		playerRespawnMarkerInitialized = true
-	endif
-EndEvent
+; Event OnLocationChange(Location oldLoc, Location newLoc)
+	; ; debug.notification("Player moved to new location: " + newLoc)
+	; ; if PlayerMarker in starting "Elsweyr" cell then move it to player
+	; if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
+		; ; respawn marker is still in default cell (Elsweyr)
+		; ;debug.notification("PlayerRespawnMarker moved to player")
+		; PlayerRespawnMarker.moveto(player)
+		; playerRespawnMarkerInitialized = true
+	; endif
+; EndEvent
 
 ; count * item removed from "me" (player) and put in dest. itemReference is ignored.
 ; we need to reverse the transfer if item is gold and dest is anything other than "none" or a vendor inventory.
