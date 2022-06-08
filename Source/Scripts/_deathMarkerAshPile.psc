@@ -2,6 +2,8 @@ Scriptname _deathMarkerAshPile extends Actor
 
 ; this script is attached to the NPC _DeathMarker
 
+_RespawnOverhaulMCM property mcmOptions auto
+
 float property fDelay = 0.75 auto
 									{time to wait before Spawning Ash Pile}
 float property fDelayEnd = 1.65 auto
@@ -39,12 +41,14 @@ EndEvent
 
 Event OnDeath(Actor Killer)
 		; (re)activate the death marker quest, allowing player to locate the grave
-		deathMarkerQuest.Stop()
-		(deathMarkerQuest.GetAliasByName("DeathMarkerRef") as ReferenceAlias).ForceRefTo(self)
-		utility.wait(0.1)    
-		deathMarkerQuest.Start()
-		deathMarkerQuest.SetObjectiveDisplayed(10)
-		deathMarkerQuest.SetStage(10)
+		if mcmOptions._giveDeathMarkerQuest
+			deathMarkerQuest.Stop()
+			(deathMarkerQuest.GetAliasByName("DeathMarkerRef") as ReferenceAlias).ForceRefTo(self)
+			utility.wait(0.1)    
+			deathMarkerQuest.Start()
+			deathMarkerQuest.SetObjectiveDisplayed(10)
+			deathMarkerQuest.SetStage(10)
+		endif
 		
 		Self.SetCriticalStage(self.CritStage_DisintegrateStart)
 		if	MagicEffectShader != none
@@ -68,13 +72,17 @@ Event OnDeath(Actor Killer)
 EndEvent
 
 
-; xxx
 Event OnActivate(ObjectReference opener)
-	if (opener == Game.GetPlayer())
-		deathMarkerQuest.SetStage(20)
-		deathMarkerQuest.CompleteQuest()
-		deathMarkerQuest.SetObjectiveDisplayed(10,false)
-		;self.Disable(true)
+	if opener == Game.GetPlayer() 
+		if mcmOptions._giveDeathMarkerQuest
+			deathMarkerQuest.SetStage(20)
+			deathMarkerQuest.CompleteQuest()
+			deathMarkerQuest.SetObjectiveDisplayed(10,false)
+			;self.Disable(true)
+		endif
+		if self.GetNumItems() == 0
+			self.Disable(true)
+		endif
 	Endif
 EndEvent
 
@@ -84,9 +92,9 @@ EndEvent
 
 Event OnItemRemoved(Form base, int count, ObjectReference itemRef, ObjectReference dest)
     if dest == Game.GetPlayer()
-        debug.notification("Item added to player inventory from grave")
+        ;debug.notification("Item added to player inventory from grave")
         if self.GetNumItems() == 0
-            debug.notification("Grave is empty, disabling")
+            ;debug.notification("Grave is empty, disabling")
             self.Disable(true)
         endif
     endif

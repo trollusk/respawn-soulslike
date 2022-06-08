@@ -206,7 +206,13 @@ Event OnEnterBleedout()
         Utility.Wait(1.25)
         if (player.IsInLocation(Sovangarde) == false)
             if (mcmOptions._lastBed == true)
-                RespawnToLocation(PlayerRespawnMarker)
+				if PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell
+					; respawn marker is still in the "Elsweyr" default cell
+					debug.notification("No bed or campfire has been set as a respawn point. Respawning to Temple of Kynareth instead.")
+					RespawnToLocation(altarTempleOfKynareth)
+				else
+					RespawnToLocation(PlayerRespawnMarker)
+				endif
             ElseIf (mcmOptions._onlyTemple == true)
                 RespawnToLocation(altarTempleOfKynareth)    
             ElseIf (mcmOptions._nearestHome == true)
@@ -753,7 +759,7 @@ Function ResetEnemiesInCell()
 	;debug.notification("ResetNPCs: found " + npcs.Length + " NPCs in cell")
 	while (npcIndex < npcs.Length)
 		Actor npc = npcs[npcIndex]
-		if (npc == deathMarker || npc == player)
+		if (npc == deathMarker || npc == player || npc.GetActorBase() == deathMarker.GetActorBase() )
 			;debug.notification("ResetNPCs: player or deathmarker - ignore: " + npc)
 		Elseif (npc.IsPlayerTeammate())
 			;debug.notification("ResetNPCs: follower - ignore: " + npc)

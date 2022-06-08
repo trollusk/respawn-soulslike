@@ -14,12 +14,14 @@ bool property _recommendedMode auto
 bool property _destroyAshpileOnDeath auto
 bool property _resetEnemies auto
 bool property _preventGoldStorage auto
+bool property _giveDeathMarkerQuest auto
 
 bool destroyAshpileOnDeath = true
 bool diabloMode = true
 bool recommendedMode = false
 bool resetEnemies = false
 bool preventGoldStorage = false
+bool giveDeathMarkerQuest = true
 
 bool onlyTemple = false
 bool nearestHold = false
@@ -118,6 +120,7 @@ int iLastBed
 int iResetEnemies
 int iPreventGoldStorage
 int iDestroyAshpileOnDeath
+int iGiveDeathMarkerQuest
 
 ObjectReference Property PlayerRespawnMarker  Auto  
 LocationRefType property locRefTypeBoss auto
@@ -187,6 +190,7 @@ Event OnConfigInit()
 	_preventGoldStorage = preventGoldStorage
 	_resetEnemies = resetEnemies
 	_destroyAshpileOnDeath = destroyAshpileOnDeath
+	_giveDeathMarkerQuest = giveDeathMarkerQuest
 	
 EndEvent
 
@@ -252,7 +256,9 @@ Event OnPageReset(string page)
 		iRecommendedMode = AddToggleOption("Set Recommended Presets", false)
 		iDiabloMode = AddToggleOption("Diablo Mode", diabloMode)
 		iDestroyAshpileOnDeath = AddToggleOption("Destroy ashpile on death", destroyAshpileOnDeath)
+		iGiveDeathMarkerQuest = AddToggleOption("Give quest to find ashpile", giveDeathMarkerQuest)
 		iResetEnemies = AddToggleOption("Reset Nearby Non-Boss Enemies", resetEnemies)
+		
 		if (npc)
 			AddTextOption("Targeted NPC", npc.GetName(), OPTION_FLAG_DISABLED)
 			AddTextOption("Unique?", (npc.GetBaseObject() as ActorBase).IsUnique(), OPTION_FLAG_DISABLED)
@@ -562,6 +568,10 @@ Event OnOptionSelect(int option)
 			resetEnemies = !resetEnemies
 			_resetEnemies = resetEnemies
 			SetToggleOptionValue(iResetEnemies, resetEnemies)			
+		elseif (option == iGiveDeathMarkerQuest)
+			giveDeathMarkerQuest = !giveDeathMarkerQuest
+			_giveDeathMarkerQuest = giveDeathMarkerQuest
+			SetToggleOptionValue(iGiveDeathMarkerQuest, giveDeathMarkerQuest)			
 		ElseIf (option == iRecommendedMode)
 			recommendedMode = ShowMessage("Set recommended presets?", true)
 			SetToggleOptionValue(iRecommendedMode, recommendedMode)
@@ -640,6 +650,8 @@ Event OnOptionSelect(int option)
 				_diabloMode = true
 				_resetEnemies = false
 				resetEnemies = false
+				_giveDeathMarkerQuest = true
+				giveDeathMarkerQuest = true
 				_destroyAshpileOnDeath = true
 				destroyAshpileOnDeath = true
 				_preventGoldStorage = false
@@ -845,6 +857,8 @@ Event OnOptionHighlight(int option)
 		SetInfoText("Seconds to wait until respawn functions run. Use this if you have other mods with death effects installed and you run them to run first. Note this doesn't work 100% of the time because bleedout state for player is quite gimmicky.")
 	ElseIf (option == iResetEnemies)
 		SetInfoText("If the player is defeated and the current location has not been 'cleared', all hostile non-boss NPCs in the cell will be resurrected, healed and reset to their starting positions. Boss NPCs are also healed and reset if they are still alive.")
+	ElseIf (option == iGiveDeathMarkerQuest)
+		SetInfoText("On death, give the player a quest to retrieve their ashpile.")
 	ElseIf (option == iPreventGoldStorage)
 		SetInfoText("Prevent the player from storing gold in containers, corpses or follower inventories. The only ways to lose gold are by spending it or being defeated.")
 	EndIf
