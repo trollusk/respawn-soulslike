@@ -1,6 +1,7 @@
 Scriptname _RespawnOverhaulMCM extends SKI_ConfigBase  
 
 Quest property _RespawnOverhaulQuest auto
+Quest property _RespawnDeathMarkerQuest auto
 
 bool property _enableMod auto
 bool enableMod = true
@@ -268,7 +269,7 @@ Event OnPageReset(string page)
 			AddTextOption("Player teammate?", npc.IsPlayerTeammate(), OPTION_FLAG_DISABLED)
 		endif
 	ElseIf(page == "Uninstall")
-		iUninstall = AddToggleOption("Uninstall mod", false)
+		iUninstall = AddTextOption("Uninstall mod", none, OPTION_FLAG_NONE)
 	EndIf
 EndEvent
 
@@ -659,10 +660,15 @@ Event OnOptionSelect(int option)
 			EndIf
 		EndIf
 	ElseIf (CurrentPage == "Uninstall")
-		_RespawnOverhaulQuest.Stop()
-		Game.GetPlayer().GetActorBase().SetEssential(false)
+		if option == iUninstall
+			_RespawnOverhaulQuest.Stop()
+			_RespawnDeathMarkerQuest.Stop()
+			Game.GetPlayer().GetActorBase().SetEssential(false)
+			debug.messagebox("Respawn mod uninstalled. Please save, exit and disable the .esp.")
+		endif
 	EndIf
 EndEvent
+
 
 Event OnOptionSliderOpen(int option)
 	If (CurrentPage == "Respawn Locations")

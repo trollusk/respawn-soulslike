@@ -86,10 +86,24 @@ FormList bossRaces
 FormList namedBosses
 bool Property playerRespawnMarkerInitialized auto
 
+; Furniture property _RBCModFire1 auto
+; Furniture property _RBCModFire2 auto
+; Furniture property _SBMModFire1 auto
+; Furniture property _SBMModFire2 auto
+; Furniture property _CampfireModFire1 auto
+; Furniture property _CampfireModFire2 auto
+; Furniture property _CampfireModFire3 auto
+; Furniture property _CampfireSBMFire1 auto
+; Furniture property _CampfireSBMFire2 auto
+; Furniture property _CampfireSBMFire3 auto
+
 Static property MapMarker auto
 FormList property campfireMarkerList auto
 Int property campfireMarkerNextAvailable auto
 ObjectReference property playerBuiltCampfireMarker auto
+
+VisualEffect property deathScreen auto
+ObjectReference property deathLocationMarker  auto  
 
 Event OnInit()
     player = Game.GetPlayer()
@@ -145,7 +159,9 @@ Event OnUpdate()
         if (player.IsBleedingOut())
             Game.ForceThirdperson()
             player.SetNoBleedoutRecovery(false)
-            player.RestoreActorValue("health", 70)
+            player.RestoreActorValue("health", 1000000)
+			player.RestoreActorValue("stamina", 1000000)
+			player.RestoreActorValue("magicka", 1000000)
             Game.EnablePlayerControls()
         EndIf
     Else
@@ -156,9 +172,9 @@ Event OnUpdate()
 EndEvent
 
 
-Event OnDying(Actor killer)
-    debug.notification("Player dying, killer = " + killer)
-EndEvent
+; Event OnDying(Actor killer)
+    ; debug.notification("Player dying, killer = " + killer)
+; EndEvent
 
 
 Event OnEnterBleedout()
@@ -168,6 +184,13 @@ Event OnEnterBleedout()
         return
     EndIf
     
+	; purpose of deathLocationMarker is to have a steadier camera for the death screen,
+	; since the player usually jiggles around in their death throes. Doesn't seem to work however
+	;deathLocationMarker.moveto(player, abMatchRotation = true)
+	;deathLocationMarker.SetAngle(player.GetAngleX(), player.GetAngleY(), player.GetAngleZ())
+	;deathScreen.play(deathLocationMarker, 2.0, none)
+	;deathScreen.play(player, 1.0, none)
+	
     RegisterForSingleUpdate(15.0)
     ; Allow delay for other mods scripts to run first if necessary
     Utility.Wait(mcmOptions._respawnDelay)
@@ -533,7 +556,9 @@ Function RespawnToLocation(ObjectReference objectLocation)
     player.GetActorBase().SetInvulnerable(true)
     Game.EnableFastTravel()
     player.SetNoBleedoutRecovery(false)
-    player.RestoreActorValue("health", 70)
+	player.RestoreActorValue("health", 1000000)
+	player.RestoreActorValue("stamina", 1000000)
+	player.RestoreActorValue("magicka", 1000000)
     Game.ForceThirdperson()
     Game.FastTravel(objectLocation)
     player.MoveTo(objectLocation)
@@ -932,22 +957,12 @@ Event OnSleepStart(float afSleepStartTime, float afDesiredSleepEndTime)
 EndEvent
 
 
-; Event OnLocationChange(Location oldLoc, Location newLoc)
-	; ; debug.notification("Player moved to new location: " + newLoc)
-	; ; if PlayerMarker in starting "Elsweyr" cell then move it to player
-	; if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
-		; ; respawn marker is still in default cell (Elsweyr)
-		; ;debug.notification("PlayerRespawnMarker moved to player")
-		; PlayerRespawnMarker.moveto(player)
-		; playerRespawnMarkerInitialized = true
-	; endif
-; EndEvent
-
 ; count * item removed from "me" (player) and put in dest. itemReference is ignored.
 ; we need to reverse the transfer if item is gold and dest is anything other than "none" or a vendor inventory.
 ; ie if dest is a follower, or a chest etc.
 ; dest.IsInFaction(MerchantFaction) >= 0
 ; dest.IsPlayerTeammate()
+
 Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectReference dest)
 	;debug.Notification("Trying to remove gold from player...")
 	if (mcmOptions._preventGoldStorage)
@@ -981,49 +996,6 @@ Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectR
 	else
 		;debug.Notification("Respawn mod is not set to prevent gold storage.")
 	endif
-EndEvent
-
-
-Event OnSit(ObjectReference furn)
-	int furnID = Math.LogicalAnd(furn.GetBaseObject().GetFormID(), 0x0FFFFF)
-	
-	;debug.Notification("Sitting on base type = " + furnID + " " + furn.GetBaseObject().GetName())
-	;debug.Notification("Furn ID = " + furnID)
-	
-	if (Game.GetModByName("DSMenuCampfire.esp") != 255)
-		; remove first 2 hex digits from formID when using with GetFormFromFile
-		int fireID1 = 0x0B1800
-		int fireID2 = 0x0B1801
-		int fireID3 = 0
-		
-		if ((furnID == fireID1) || (furnID == fireID2))
-			;debug.Notification("Sitting at campfire! (DSMenuCampfire.esp)")
-			PlaceRespawnMarkerAtCampfire()
-			return
-		elseif (Game.GetModByName("SBM-Campfire Patch.esp") != 255)
-			fireID1 = 0x39577
-			fireID2 = 0x536e7
-			fireID3 = 0x7bea2
-			if ((furnID == fireID1) || (furnID == fireID2) || (furnID == fireID3))
-				;debug.Notification("Sitting at campfire! (SBM-Campfire Patch.esp)")
-				PlaceRespawnMarkerAtCampfire()
-				return
-			endif
-		endif
-	endif      ; souls bonfire menu
-	
-	if (Game.GetModByName("Campfire.esm") != 255)
-		int fireID1 = 0x39577
-		int fireID2 = 0x536e7
-		int fireID3 = 0x7bea2
-		if ((furnID == fireID1) || (furnID == fireID2) || (furnID == fireID3))
-			;debug.Notification("Sitting at campfire! (Campfire.esm)")
-			PlaceRespawnMarkerAtCampfire()
-			return
-		endif
-	endif
-	;debug.Notification("No campfire detected")
-	
 EndEvent
 
 
