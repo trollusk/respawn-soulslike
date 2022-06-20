@@ -14,6 +14,7 @@ bool property _diabloMode auto
 bool property _recommendedMode auto
 bool property _destroyAshpileOnDeath auto
 bool property _resetEnemies auto
+bool property _resetBosses auto
 bool property _preventGoldStorage auto
 bool property _giveDeathMarkerQuest auto
 
@@ -21,6 +22,7 @@ bool destroyAshpileOnDeath = true
 bool diabloMode = true
 bool recommendedMode = false
 bool resetEnemies = false
+bool resetBosses = false
 bool preventGoldStorage = false
 bool giveDeathMarkerQuest = true
 
@@ -37,23 +39,28 @@ bool property _lastBed auto
 float property _respawnDelay auto
 float respawnDelay
 
-float property expPenaltyPercent auto
-bool expPenalty10 = false
-bool expPenalty25 = true
-bool expPenalty50 = false
-bool expPenalty75 = false
-bool expPenalty100 = false
+float property _expPenaltyPercent auto
+float expPenaltyPercent
 
-float property skillExpPenaltyPercent auto
-bool skillExpPenalty10 = false
-bool skillExpPenalty25 = true
-bool skillExpPenalty50 = false
-bool skillExpPenalty75 = false
-bool skillExpPenalty100 = false
+; bool expPenalty10 = false
+; bool expPenalty25 = true
+; bool expPenalty50 = false
+; bool expPenalty75 = false
+; bool expPenalty100 = false
+
+float property _skillExpPenaltyPercent auto
+float skillExpPenaltyPercent
+
+; bool skillExpPenalty10 = false
+; bool skillExpPenalty25 = true
+; bool skillExpPenalty50 = false
+; bool skillExpPenalty75 = false
+; bool skillExpPenalty100 = false
+
 bool combatSkillsOnly = false
 bool property _combatSkillsOnly auto
 
-int dragonSoulsLost = 1
+int dragonSoulsLost = 0
 int property _dragonSoulsLost auto
 
 float property _goldPenaltyMin auto
@@ -100,16 +107,18 @@ int iAmuletPenalty
 int iRingPenalty
 int iInventoryPenalty
 int iExcludeCreatures
-int iExpPenaltyPercent10
-int iExpPenaltyPercent25
-int iExpPenaltyPercent50
-int iExpPenaltyPercent75
-int iExpPenaltyPercent100
-int iSkillExpPenaltyPercent10
-int iSkillExpPenaltyPercent25
-int iSkillExpPenaltyPercent50
-int iSkillExpPenaltyPercent75
-int iSkillExpPenaltyPercent100
+int iExpPenaltyPercent
+; int iExpPenaltyPercent10
+; int iExpPenaltyPercent25
+; int iExpPenaltyPercent50
+; int iExpPenaltyPercent75
+; int iExpPenaltyPercent100
+int iSkillExpPenaltyPercent
+; int iSkillExpPenaltyPercent10
+; int iSkillExpPenaltyPercent25
+; int iSkillExpPenaltyPercent50
+; int iSkillExpPenaltyPercent75
+; int iSkillExpPenaltyPercent100
 int iCombatSkillsOnly
 int iDragonSoulsLost
 int iDisableSaves
@@ -119,6 +128,7 @@ int iRecommendedMode
 int iUninstall
 int iLastBed
 int iResetEnemies
+int iResetBosses
 int iPreventGoldStorage
 int iDestroyAshpileOnDeath
 int iGiveDeathMarkerQuest
@@ -159,29 +169,31 @@ Event OnConfigInit()
 	_goldPenaltyMin = goldPenaltyMin
 	_goldPenaltyMax = goldPenaltyMax
 	
-	if (expPenalty10)
-		expPenaltyPercent = 0.1
-	ElseIf (expPenalty25)
-		expPenaltyPercent = 0.25
-	ElseIf (expPenalty50)
-		expPenaltyPercent = 0.5
-	ElseIf (expPenalty75)
-		expPenaltyPercent = 0.75
-	ElseIf (expPenalty100)
-		expPenaltyPercent = 1.0
-	EndIf
+	_expPenaltyPercent = expPenaltyPercent
+	_skillExpPenaltyPercent = skillExpPenaltyPercent
+	; if (expPenalty10)
+		; expPenaltyPercent = 0.1
+	; ElseIf (expPenalty25)
+		; expPenaltyPercent = 0.25
+	; ElseIf (expPenalty50)
+		; expPenaltyPercent = 0.5
+	; ElseIf (expPenalty75)
+		; expPenaltyPercent = 0.75
+	; ElseIf (expPenalty100)
+		; expPenaltyPercent = 1.0
+	; EndIf
 	
-	if (skillExpPenalty10)
-		skillExpPenaltyPercent = 0.1
-	ElseIf (skillExpPenalty25)
-		skillExpPenaltyPercent = 0.25
-	ElseIf (skillExpPenalty50)
-		skillExpPenaltyPercent = 0.5
-	ElseIf (skillExpPenalty75)
-		skillExpPenaltyPercent = 0.75
-	ElseIf (skillExpPenalty100)
-		skillExpPenaltyPercent = 1.0
-	EndIf
+	; if (skillExpPenalty10)
+		; skillExpPenaltyPercent = 0.1
+	; ElseIf (skillExpPenalty25)
+		; skillExpPenaltyPercent = 0.25
+	; ElseIf (skillExpPenalty50)
+		; skillExpPenaltyPercent = 0.5
+	; ElseIf (skillExpPenalty75)
+		; skillExpPenaltyPercent = 0.75
+	; ElseIf (skillExpPenalty100)
+		; skillExpPenaltyPercent = 1.0
+	; EndIf
 	
 	_combatSkillsOnly = combatSkillsOnly
 	
@@ -190,6 +202,7 @@ Event OnConfigInit()
 	_lastBed = lastBed
 	_preventGoldStorage = preventGoldStorage
 	_resetEnemies = resetEnemies
+	_resetBosses = resetBosses
 	_destroyAshpileOnDeath = destroyAshpileOnDeath
 	_giveDeathMarkerQuest = giveDeathMarkerQuest
 	
@@ -230,24 +243,28 @@ Event OnPageReset(string page)
 		iExcludeCreatures = AddToggleOption("Exclude creatures", excludeCreatures)
 	ElseIf (page == ("EXP Penalties"))
 		SetCursorFillMode(TOP_TO_BOTTOM)
-		AddHeaderOption("Player level penalty")
-		iExpPenaltyPercent10 = AddToggleOption("10%", expPenalty10)
-		iExpPenaltyPercent25 = AddToggleOption("25%", expPenalty25)
-		iExpPenaltyPercent50 = AddToggleOption("50%", expPenalty50)
-		iExpPenaltyPercent75 = AddToggleOption("75%", expPenalty75)
-		iExpPenaltyPercent100 = AddToggleOption("100%", expPenalty100)
-		
-		AddHeaderOption("Skill exp penalty")
-		iCombatSkillsOnly = AddToggleOption("Combat skills only", combatSkillsOnly)
-		iSkillExpPenaltyPercent10 = AddToggleOption("10%", skillExpPenalty10)
-		iSkillExpPenaltyPercent25 = AddToggleOption("25%", skillExpPenalty25)
-		iSkillExpPenaltyPercent50 = AddToggleOption("50%", skillExpPenalty50)
-		iSkillExpPenaltyPercent75 = AddToggleOption("75%", skillExpPenalty75)
-		iSkillExpPenaltyPercent100 = AddToggleOption("100%", skillExpPenalty100)
-		
 		AddHeaderOption("Dragon souls")
 		iDragonSoulsLost = AddSliderOption("Dragon souls lost", dragonSoulsLost)
-
+		
+		AddHeaderOption("Experience penalty")
+		iExpPenaltyPercent = AddSliderOption("% of lost progress to next level", expPenaltyPercent)
+		iSkillExpPenaltyPercent = AddSliderOption("% of lost progress to next skill level", skillExpPenaltyPercent)
+		; iExpPenaltyPercent0 = AddToggleOption("0%", expPenalty0)
+		; iExpPenaltyPercent10 = AddToggleOption("10%", expPenalty10)
+		; iExpPenaltyPercent25 = AddToggleOption("25%", expPenalty25)
+		; iExpPenaltyPercent50 = AddToggleOption("50%", expPenalty50)
+		; iExpPenaltyPercent75 = AddToggleOption("75%", expPenalty75)
+		; iExpPenaltyPercent100 = AddToggleOption("100%", expPenalty100)
+		
+		; AddHeaderOption("Skill exp penalty")
+		iCombatSkillsOnly = AddToggleOption("Lose progress on combat skills only", combatSkillsOnly)
+		; iSkillExpPenaltyPercent0 = AddToggleOption("0%", skillExpPenalty0)
+		; iSkillExpPenaltyPercent10 = AddToggleOption("10%", skillExpPenalty10)
+		; iSkillExpPenaltyPercent25 = AddToggleOption("25%", skillExpPenalty25)
+		; iSkillExpPenaltyPercent50 = AddToggleOption("50%", skillExpPenalty50)
+		; iSkillExpPenaltyPercent75 = AddToggleOption("75%", skillExpPenalty75)
+		; iSkillExpPenaltyPercent100 = AddToggleOption("100%", skillExpPenalty100)
+		
 	ElseIf (page == ("Save Settings"))
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		iDisableSaves = AddToggleOption("Disable Quicksaving", disableSaves)
@@ -259,6 +276,7 @@ Event OnPageReset(string page)
 		iDestroyAshpileOnDeath = AddToggleOption("Destroy ashpile on death", destroyAshpileOnDeath)
 		iGiveDeathMarkerQuest = AddToggleOption("Give quest to find ashpile", giveDeathMarkerQuest)
 		iResetEnemies = AddToggleOption("Reset Nearby Non-Boss Enemies", resetEnemies)
+		iResetBosses = AddToggleOption("  ...Also reset nearby bosses (if alive)", resetBosses)
 		
 		if (npc)
 			AddTextOption("Targeted NPC", npc.GetName(), OPTION_FLAG_DISABLED)
@@ -343,167 +361,185 @@ Event OnOptionSelect(int option)
 			SetToggleOptionValue(iPreventGoldStorage, preventGoldStorage)
 		EndIf
 	ElseIf (CurrentPage == "EXP Penalties")
-		if (option == iExpPenaltyPercent10)
-			expPenalty10 = !expPenalty10
-			SetToggleOptionValue(iExpPenaltyPercent10, expPenalty10)
-			if (expPenalty10 == true)
-				expPenaltyPercent = 0.1
-				expPenalty25 = false
-				expPenalty50 = false
-				expPenalty75 = false
-				expPenalty100 = false
-				SetToggleOptionValue(iExpPenaltyPercent25, false)
-				SetToggleOptionValue(iExpPenaltyPercent50, false)
-				SetToggleOptionValue(iExpPenaltyPercent75, false)
-				SetToggleOptionValue(iExpPenaltyPercent100, false)
-			else
-				expPenaltyPercent = 0
-			EndIf
-		elseIf (option == iExpPenaltyPercent25)
-			expPenalty25 = !expPenalty25
-			SetToggleOptionValue(iExpPenaltyPercent25, expPenalty25)
-			if (expPenalty25 == true)
-				expPenaltyPercent = 0.25
-				expPenalty10 = false
-				expPenalty50 = false
-				expPenalty75 = false
-				expPenalty100 = false
-				SetToggleOptionValue(iExpPenaltyPercent10, false)
-				SetToggleOptionValue(iExpPenaltyPercent50, false)
-				SetToggleOptionValue(iExpPenaltyPercent75, false)
-				SetToggleOptionValue(iExpPenaltyPercent100, false)
-			else
-				expPenaltyPercent = 0
-			EndIf
-		elseIf (option == iExpPenaltyPercent50)
-			expPenalty50 = !expPenalty50
-			SetToggleOptionValue(iExpPenaltyPercent50, expPenalty50)
-			if (expPenalty50 == true)
-				expPenaltyPercent = 0.5
-				expPenalty10 = false
-				expPenalty25 = false
-				expPenalty75 = false
-				expPenalty100 = false
-				SetToggleOptionValue(iExpPenaltyPercent10, false)
-				SetToggleOptionValue(iExpPenaltyPercent25, false)
-				SetToggleOptionValue(iExpPenaltyPercent75, false)
-				SetToggleOptionValue(iExpPenaltyPercent100, false)
-			else
-				expPenaltyPercent = 0
-			EndIf
-		elseIf (option == iExpPenaltyPercent75)
-			expPenalty75 = !expPenalty75
-			SetToggleOptionValue(iExpPenaltyPercent75, expPenalty75)
-			if (expPenalty75 == true)
-				expPenaltyPercent = 0.75
-				expPenalty10 = false
-				expPenalty25 = false
-				expPenalty50 = false
-				expPenalty100 = false
-				SetToggleOptionValue(iExpPenaltyPercent10, false)
-				SetToggleOptionValue(iExpPenaltyPercent25, false)
-				SetToggleOptionValue(iExpPenaltyPercent50, false)
-				SetToggleOptionValue(iExpPenaltyPercent100, false)
-			else
-				expPenaltyPercent = 0
-			EndIf
-		elseIf (option == iExpPenaltyPercent100)
-			expPenalty100 = !expPenalty100
-			SetToggleOptionValue(iExpPenaltyPercent100, expPenalty100)
-			if (expPenalty100 == true)
-				expPenaltyPercent = 1.0
-				expPenalty10 = false
-				expPenalty25 = false
-				expPenalty50 = false
-				expPenalty75 = false
-				SetToggleOptionValue(iExpPenaltyPercent10, false)
-				SetToggleOptionValue(iExpPenaltyPercent25, false)
-				SetToggleOptionValue(iExpPenaltyPercent50, false)
-				SetToggleOptionValue(iExpPenaltyPercent75, false)
-			else
-				expPenaltyPercent = 0
-			EndIf
-		elseIf (option == iSkillExpPenaltyPercent10)
-			skillExpPenalty10 = !skillExpPenalty10
-			SetToggleOptionValue(iSkillExpPenaltyPercent10, skillExpPenalty10)
-			if (skillExpPenalty10 == true)
-				skillExpPenaltyPercent = 0.1
-				skillExpPenalty25 = false
-				skillExpPenalty50 = false
-				skillExpPenalty75 = false
-				skillExpPenalty100 = false
-				SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
-			else
-				skillExpPenaltyPercent = 0
-			EndIf
-		elseIf (option == iSkillExpPenaltyPercent25)
-			skillExpPenalty25 = !skillExpPenalty25
-			SetToggleOptionValue(iSkillExpPenaltyPercent25, skillExpPenalty25)
-			if (skillExpPenalty25 == true)
-				skillExpPenaltyPercent = 0.25
-				skillExpPenalty10 = false
-				skillExpPenalty50 = false
-				skillExpPenalty75 = false
-				skillExpPenalty100 = false
-				SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
-			else
-				skillExpPenaltyPercent = 0
-			EndIf
-		elseIf (option == iSkillExpPenaltyPercent50)
-			skillExpPenalty50 = !skillExpPenalty50
-			SetToggleOptionValue(iSkillExpPenaltyPercent50, skillExpPenalty50)
-			if (skillExpPenalty50 == true)
-				skillExpPenaltyPercent = 0.5
-				skillExpPenalty10 = false
-				skillExpPenalty25 = false
-				skillExpPenalty75 = false
-				skillExpPenalty100 = false
-				SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
-			else
-				skillExpPenaltyPercent = 0
-			EndIf
-		elseIf (option == iSkillExpPenaltyPercent75)
-			skillExpPenalty75 = !skillExpPenalty75
-			SetToggleOptionValue(iSkillExpPenaltyPercent75, skillExpPenalty75)
-			if (skillExpPenalty75 == true)
-				skillExpPenaltyPercent = 0.75
-				skillExpPenalty10 = false
-				skillExpPenalty25 = false
-				skillExpPenalty50 = false
-				skillExpPenalty100 = false
-				SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
-			else
-				skillExpPenaltyPercent = 0
-			EndIf
-		elseIf (option == iSkillExpPenaltyPercent100)
-			skillExpPenalty100 = !skillExpPenalty100
-			SetToggleOptionValue(iSkillExpPenaltyPercent100, skillExpPenalty100)
-			if (skillExpPenalty100 == true)
-				skillExpPenaltyPercent = 1.0
-				skillExpPenalty10 = false
-				skillExpPenalty25 = false
-				skillExpPenalty50 = false
-				skillExpPenalty75 = false
-				SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
-			else
-				skillExpPenaltyPercent = 0
-			EndIf
-		elseIf (option == iCombatSkillsOnly)
+		; if (option == iExpPenaltyPercent0)
+			; expPenalty0 = !expPenalty0
+			; SetToggleOptionValue(iExpPenaltyPercent0, expPenalty0)
+			; if (expPenalty0 == true)
+				; expPenaltyPercent = 0.0
+				; expPenalty10 = false
+				; expPenalty25 = false
+				; expPenalty50 = false
+				; expPenalty75 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; if (option == iExpPenaltyPercent10)
+			; expPenalty10 = !expPenalty10
+			; SetToggleOptionValue(iExpPenaltyPercent10, expPenalty10)
+			; if (expPenalty10 == true)
+				; expPenaltyPercent = 0.1
+				; expPenalty25 = false
+				; expPenalty50 = false
+				; expPenalty75 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iExpPenaltyPercent25)
+			; expPenalty25 = !expPenalty25
+			; SetToggleOptionValue(iExpPenaltyPercent25, expPenalty25)
+			; if (expPenalty25 == true)
+				; expPenaltyPercent = 0.25
+				; expPenalty10 = false
+				; expPenalty50 = false
+				; expPenalty75 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iExpPenaltyPercent50)
+			; expPenalty50 = !expPenalty50
+			; SetToggleOptionValue(iExpPenaltyPercent50, expPenalty50)
+			; if (expPenalty50 == true)
+				; expPenaltyPercent = 0.5
+				; expPenalty10 = false
+				; expPenalty25 = false
+				; expPenalty75 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iExpPenaltyPercent75)
+			; expPenalty75 = !expPenalty75
+			; SetToggleOptionValue(iExpPenaltyPercent75, expPenalty75)
+			; if (expPenalty75 == true)
+				; expPenaltyPercent = 0.75
+				; expPenalty10 = false
+				; expPenalty25 = false
+				; expPenalty50 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iExpPenaltyPercent100)
+			; expPenalty100 = !expPenalty100
+			; SetToggleOptionValue(iExpPenaltyPercent100, expPenalty100)
+			; if (expPenalty100 == true)
+				; expPenaltyPercent = 1.0
+				; expPenalty10 = false
+				; expPenalty25 = false
+				; expPenalty50 = false
+				; expPenalty75 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+			; else
+				; expPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iSkillExpPenaltyPercent10)
+			; skillExpPenalty10 = !skillExpPenalty10
+			; SetToggleOptionValue(iSkillExpPenaltyPercent10, skillExpPenalty10)
+			; if (skillExpPenalty10 == true)
+				; skillExpPenaltyPercent = 0.1
+				; skillExpPenalty25 = false
+				; skillExpPenalty50 = false
+				; skillExpPenalty75 = false
+				; skillExpPenalty100 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
+			; else
+				; skillExpPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iSkillExpPenaltyPercent25)
+			; skillExpPenalty25 = !skillExpPenalty25
+			; SetToggleOptionValue(iSkillExpPenaltyPercent25, skillExpPenalty25)
+			; if (skillExpPenalty25 == true)
+				; skillExpPenaltyPercent = 0.25
+				; skillExpPenalty10 = false
+				; skillExpPenalty50 = false
+				; skillExpPenalty75 = false
+				; skillExpPenalty100 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
+			; else
+				; skillExpPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iSkillExpPenaltyPercent50)
+			; skillExpPenalty50 = !skillExpPenalty50
+			; SetToggleOptionValue(iSkillExpPenaltyPercent50, skillExpPenalty50)
+			; if (skillExpPenalty50 == true)
+				; skillExpPenaltyPercent = 0.5
+				; skillExpPenalty10 = false
+				; skillExpPenalty25 = false
+				; skillExpPenalty75 = false
+				; skillExpPenalty100 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
+			; else
+				; skillExpPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iSkillExpPenaltyPercent75)
+			; skillExpPenalty75 = !skillExpPenalty75
+			; SetToggleOptionValue(iSkillExpPenaltyPercent75, skillExpPenalty75)
+			; if (skillExpPenalty75 == true)
+				; skillExpPenaltyPercent = 0.75
+				; skillExpPenalty10 = false
+				; skillExpPenalty25 = false
+				; skillExpPenalty50 = false
+				; skillExpPenalty100 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
+			; else
+				; skillExpPenaltyPercent = 0
+			; EndIf
+		; elseIf (option == iSkillExpPenaltyPercent100)
+			; skillExpPenalty100 = !skillExpPenalty100
+			; SetToggleOptionValue(iSkillExpPenaltyPercent100, skillExpPenalty100)
+			; if (skillExpPenalty100 == true)
+				; skillExpPenaltyPercent = 1.0
+				; skillExpPenalty10 = false
+				; skillExpPenalty25 = false
+				; skillExpPenalty50 = false
+				; skillExpPenalty75 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent25, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
+			; else
+				; skillExpPenaltyPercent = 0
+			; EndIf
+		If (option == iCombatSkillsOnly)
 			combatSkillsOnly = !combatSkillsOnly
 			SetToggleOptionValue(iCombatSkillsOnly, combatSkillsOnly)
 			_combatSkillsOnly = combatSkillsOnly
@@ -560,6 +596,12 @@ Event OnOptionSelect(int option)
 				_dragonSoulsLost = 0
 				dragonSoulsLost = 0
 				SetSliderOptionValue(iDragonSoulsLost, 0)
+				expPenaltyPercent = 10.0
+				_expPenaltyPercent = expPenaltyPercent
+				SetSliderOptionValue(iExpPenaltyPercent, expPenaltyPercent)
+				skillExpPenaltyPercent = 10.0
+				_skillExpPenaltyPercent = skillExpPenaltyPercent
+				SetSliderOptionValue(iExpPenaltyPercent, skillExpPenaltyPercent)
 			EndIf
 		elseif (option == iDestroyAshpileOnDeath)
 			destroyAshpileOnDeath = !destroyAshpileOnDeath
@@ -569,6 +611,10 @@ Event OnOptionSelect(int option)
 			resetEnemies = !resetEnemies
 			_resetEnemies = resetEnemies
 			SetToggleOptionValue(iResetEnemies, resetEnemies)			
+		elseif (option == iResetBosses)
+			resetBosses = !resetBosses
+			_resetBosses = resetBosses
+			SetToggleOptionValue(iResetBosses, resetBosses)			
 		elseif (option == iGiveDeathMarkerQuest)
 			giveDeathMarkerQuest = !giveDeathMarkerQuest
 			_giveDeathMarkerQuest = giveDeathMarkerQuest
@@ -621,36 +667,43 @@ Event OnOptionSelect(int option)
 				SetSliderOptionValue(iRingPenalty, 0)
 				SetSliderOptionValue(iAmuletPenalty, 0)
 				SetSliderOptionValue(iInventoryPenalty, 0)
-				expPenalty10 = false
-				expPenalty25 = true
-				expPenalty50 = false
-				expPenalty75 = false
-				expPenalty100 = false
-				expPenaltyPercent = 0.25
-				SetToggleOptionValue(iExpPenaltyPercent10, false)
-				SetToggleOptionValue(iExpPenaltyPercent25, true)
-				SetToggleOptionValue(iExpPenaltyPercent50, false)
-				SetToggleOptionValue(iExpPenaltyPercent75, false)
-				SetToggleOptionValue(iExpPenaltyPercent100, false)
-				skillExpPenalty10 = false
-				skillExpPenalty25 = true
-				skillExpPenalty50 = false
-				skillExpPenalty75 = false
-				skillExpPenalty100 = false
-				skillExpPenaltyPercent = 0.25
-				SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent25, true)
-				SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
-				SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
-				_dragonSoulsLost = 1
-				dragonSoulsLost = 1
+				expPenaltyPercent = 10.0
+				_expPenaltyPercent = expPenaltyPercent
+				SetSliderOptionValue(iExpPenaltyPercent, expPenaltyPercent)
+				skillExpPenaltyPercent = 10.0
+				_skillExpPenaltyPercent = skillExpPenaltyPercent
+				SetSliderOptionValue(iExpPenaltyPercent, skillExpPenaltyPercent)
+				; expPenalty10 = false
+				; expPenalty25 = true
+				; expPenalty50 = false
+				; expPenalty75 = false
+				; expPenalty100 = false
+				; SetToggleOptionValue(iExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iExpPenaltyPercent25, true)
+				; SetToggleOptionValue(iExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iExpPenaltyPercent100, false)
+				; skillExpPenalty10 = false
+				; skillExpPenalty25 = true
+				; skillExpPenalty50 = false
+				; skillExpPenalty75 = false
+				; skillExpPenalty100 = false
+				; SetToggleOptionValue(iSkillExpPenaltyPercent10, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent25, true)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent50, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent75, false)
+				; SetToggleOptionValue(iSkillExpPenaltyPercent100, false)
+				
+				_dragonSoulsLost = 0
+				dragonSoulsLost = 0
 				SetSliderOptionValue(iDragonSoulsLost, 1)
 				SetToggleOptionValue(iDiabloMode, true)
 				diabloMode = true
 				_diabloMode = true
 				_resetEnemies = false
 				resetEnemies = false
+				_resetBosses = false
+				resetBosses = false
 				_giveDeathMarkerQuest = true
 				giveDeathMarkerQuest = true
 				_destroyAshpileOnDeath = true
@@ -681,9 +734,19 @@ Event OnOptionSliderOpen(int option)
 	ElseIf (CurrentPage == "EXP Penalties")
 		if (option == iDragonSoulsLost)
 			SetSliderDialogStartValue(dragonSoulsLost)
-			SetSliderDialogDefaultValue(1)
+			SetSliderDialogDefaultValue(0)
 			SetSliderDialogRange(0, 50)
 			SetSliderDialogInterval(1.0)
+		elseif (option == iExpPenaltyPercent)
+			SetSliderDialogStartValue(expPenaltyPercent)
+			SetSliderDialogDefaultValue(10)
+			SetSliderDialogRange(0, 100)
+			SetSliderDialogInterval(5.0)
+		elseif (option == iSkillExpPenaltyPercent)
+			SetSliderDialogStartValue(skillExpPenaltyPercent)
+			SetSliderDialogDefaultValue(10)
+			SetSliderDialogRange(0, 100)
+			SetSliderDialogInterval(5.0)
 		EndIf
 	ElseIf (CurrentPage == "Inventory Penalties")
 		if (option == iGoldPenaltyMin)
@@ -757,6 +820,14 @@ Event OnOptionSliderAccept(int option, float value)
 			dragonSoulsLost = Math.floor(value)
 			_dragonSoulsLost = dragonSoulsLost
 			SetSliderOptionValue(iDragonSoulsLost,dragonSoulsLost)
+		ElseIf (option == iExpPenaltyPercent)
+			expPenaltyPercent = value
+			_expPenaltyPercent = expPenaltyPercent
+			SetSliderOptionValue(iExpPenaltyPercent, expPenaltyPercent)
+		ElseIf (option == iSkillExpPenaltyPercent)
+			skillExpPenaltyPercent = value
+			_skillExpPenaltyPercent = skillExpPenaltyPercent
+			SetSliderOptionValue(iSkillExpPenaltyPercent, skillExpPenaltyPercent)
 		EndIf
 	ElseIf (CurrentPage == "Inventory Penalties")
 		if (option == iGoldPenaltyMin)
@@ -853,8 +924,14 @@ Event OnOptionHighlight(int option)
 		SetInfoText("All deaths in Tamriel will have you respawn at the closest halls of the dead. Possible locations are Whiterun, Markarth, Solitude, Riften, Falkreath, and Windhelm.")
 	ElseIf (option == iNearestHome)
 		SetInfoText("Deaths in Tamriel will have you respawn at the nearest player home. If used in conjunction with nearest hold, it will bring you to the nearest hold if no home is available in that city.")
+	ElseIf (option == iExpPenaltyPercent)
+		SetInfoText("Proportion of progress toward the next character level, that is lost on death.")
+	ElseIf (option == iSkillExpPenaltyPercent)
+		SetInfoText("Proportion of progress toward the next level, that is lost from every skill on death.")
 	ElseIf (option == iInventoryPenalty)
-		SetInfoText("Deaths will see the player forfeit their entire inventory to the person who defeated them. They will hold on to the items so you can seek them out for a rematch and get your items back. Quest items should be unaffected.")
+		SetInfoText("Chance, for each item in the player's inventory, that it will be dropped on death. Or to look at it another way, the proportion of inventory items that will be dropped. If Diablo Mode is active, the items go into the ashpile, otherwise they enter the inventory of whoever killed the player. Does not include equipped items or quest items.")
+	ElseIf (option == iInventoryPenalty)
+		SetInfoText("Chance, for each item in the player's inventory, that it will be dropped on death. Or to look at it another way, the proportion of inventory items that will be dropped. If Diablo Mode is active, the items go into the ashpile, otherwise they enter the inventory of whoever killed the player. Does not include equipped items or quest items.")
 	ElseIf (option == iDiabloMode)
 		SetInfoText("Emulates Diablo 2's death system: An ashpile will be left at the player's location when defeated and all equipped items and gold will be transferred into the ashpile. This may be a safer option if you're worried about your killers running off with your items. WARNING: This resets your inventory penalty settings to match a preset.")
 	ElseIf (option == iDestroyAshpileOnDeath)
@@ -862,7 +939,9 @@ Event OnOptionHighlight(int option)
 	ElseIf (option == respawnDelay)
 		SetInfoText("Seconds to wait until respawn functions run. Use this if you have other mods with death effects installed and you run them to run first. Note this doesn't work 100% of the time because bleedout state for player is quite gimmicky.")
 	ElseIf (option == iResetEnemies)
-		SetInfoText("If the player is defeated and the current location has not been 'cleared', all hostile non-boss NPCs in the cell will be resurrected, healed and reset to their starting positions. Boss NPCs are also healed and reset if they are still alive.")
+		SetInfoText("If the player is defeated and the current location has not been 'cleared', all hostile non-boss NPCs in the cell will be resurrected, healed and reset to their starting positions.")
+	ElseIf (option == iResetBosses)
+		SetInfoText("(Reset Enemies only) Boss NPCs are also reset if they are still alive. If not selected (default), surviving bosses will be healed and moved back to their original location, but NOT fully reset. Fully resetting bosses might break quests or scripts in some cases.")
 	ElseIf (option == iGiveDeathMarkerQuest)
 		SetInfoText("On death, give the player a quest to retrieve their ashpile.")
 	ElseIf (option == iPreventGoldStorage)

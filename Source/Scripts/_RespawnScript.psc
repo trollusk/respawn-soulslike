@@ -55,7 +55,7 @@ bool f5Pressed
 Faction property playerFaction auto
 
 ;Areas that break quests or become inaccessible
-Location property HalldirsCairn auto
+Location property HalldirsCairn auto				; 0x019192
 Location property DimhallowCavern auto
 Location property ShroudhearthBarrow auto
 Location property SerpentsBluff auto
@@ -84,6 +84,8 @@ LocationRefType property locRefTypeDLC2Boss1 auto
 
 FormList bossRaces
 FormList namedBosses
+FormList noResetBosses
+FormList noResetLocations
 bool Property playerRespawnMarkerInitialized auto
 
 ; Furniture property _RBCModFire1 auto
@@ -113,6 +115,8 @@ Event OnInit()
 
 	PopulateBossRaceList()
 	PopulateNamedBossList()
+	PopulateNoResetBossList()
+	PopulateNoResetLocationList()
 	
     RegisterForSleep()
 	AddInventoryEventFilter(gold)
@@ -126,6 +130,8 @@ Event OnPlayerLoadGame()
 	
 	PopulateBossRaceList()
 	PopulateNamedBossList()
+	PopulateNoResetBossList()
+	PopulateNoResetLocationList()
 	
 	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
 		;debug.notification("PlayerRespawnMarker not initialized, moving to player...")
@@ -628,12 +634,38 @@ Function RemoveGear()
             int amuletLostRNG = Utility.RandomInt(0, 100)
             int ringLostRNG = Utility.RandomInt(0, 100)
             int inventoryLostRNG = Utility.RandomInt(0, 100)
-            if (inventoryLostRNG < mcmOptions._inventoryPenalty)
-                player.RemoveAllItems(lastEnemy, false, false)
-                player.RemoveAllItems()
-                player.AddItem(defaultArmor)
-                player.EquipItem(defaultArmor)
-            EndIf
+			
+			int invIndex = player.GetNumItems()
+			FormList itemsToLose
+			while invIndex > 0
+				invIndex -= 1
+				Form item = player.GetNthForm(invIndex)
+				ObjectReference itemref = item as ObjectReference
+				if player.IsEquipped(item) 
+					; do nothing - item is equipped
+				elseif item == gold || itemref.GetBaseObject() == gold 
+					; do nothing - item is gold
+				elseif itemref.GetNumReferenceAliases() == 0
+					; not equipped, not gold, and not a quest item
+					if Utility.RandomInt(0, 100) < mcmOptions._inventoryPenalty
+						itemsToLose.AddForm(item)
+					endif
+				endif
+			endWhile
+			
+			invIndex = itemsToLose.GetSize()
+			while invIndex > 0
+				invIndex -= 1
+				Form item = itemsToLose.GetAt(invIndex)
+				player.RemoveItem(item, Utility.RandomInt(1, player.GetItemCount(item)), false, lastEnemy)
+			endwhile
+			
+            ; if (inventoryLostRNG < mcmOptions._inventoryPenalty)
+                ; player.RemoveAllItems(lastEnemy, false, false)
+                ; player.RemoveAllItems()
+                ; player.AddItem(defaultArmor)
+                ; player.EquipItem(defaultArmor)
+            ; EndIf
             if (mcmOptions._weaponPenalty > 0 && weaponLostRNG < mcmOptions._weaponPenalty && player.GetEquippedWeapon() != None)
                 lastEnemy.AddItem(player.GetEquippedWeapon())
                 player.RemoveItem(player.GetEquippedWeapon())
@@ -726,7 +758,7 @@ Bool Function IsTransformed()
 EndFunction
 
 Function RemoveExp()
-    float expPenalty = mcmOptions.expPenaltyPercent
+    float expPenalty = mcmOptions._expPenaltyPercent / 100.0
     float currentExp = Game.GetPlayerExperience()
     float expToLose = expPenalty * currentExp
     Game.SetPlayerExperience(currentExp - expToLose)
@@ -757,7 +789,7 @@ Function RemoveSkillExp()
 EndFunction
 
 Function DoSkillExpCalc(string skillName)
-    float expPenalty = mcmOptions.skillExpPenaltyPercent
+    float expPenalty = mcmOptions._skillExpPenaltyPercent / 100.0
     ActorValueInfo skill = ActorValueInfo.GetActorValueInfoByName(skillName)
     float skillExp = skill.GetSkillExperience()
     float skillExpToLose = skillExp * expPenalty
@@ -781,7 +813,17 @@ EndFunction
 Function ResetEnemiesInCell()
 	Actor[] npcs = MiscUtil.ScanCellNPCs(player, 0.0, IgnoreDead=false)
 	int npcIndex = 0
+	int locationIndex = noResetLocations.GetSize()
 	;debug.notification("ResetNPCs: found " + npcs.Length + " NPCs in cell")
+	
+	; Ensure we are not in a blacklisted location
+	while locationIndex > 0
+		locationIndex -= 1
+		if player.IsInLocation(noResetLocations.GetAt(locationIndex) as Location)
+			return
+		endif
+	endWhile
+	
 	while (npcIndex < npcs.Length)
 		Actor npc = npcs[npcIndex]
 		if (npc == deathMarker || npc == player || npc.GetActorBase() == deathMarker.GetActorBase() )
@@ -791,11 +833,19 @@ Function ResetEnemiesInCell()
 			; ?or if npc.GetRelationshipRank(player) > 0
 			npc.ResetHealthAndLimbs()
 		Elseif (IsBoss(npc) || (npc.GetBaseObject() as ActorBase).IsUnique())
-			; reset bosses and "unique" npcs, unless they are dead
+			; only reset bosses and "unique" npcs if they are still alive
 			if (!(npc.IsDead()))
-				;debug.notification("ResetNPCs: boss and not dead - RESET: " + npc)
-				ResetEnemy(npc)
-				Utility.Wait(0.1)
+				if noResetBosses.HasForm(npc) 
+					; Boss is blacklisted - do not reset, just heal
+					npc.ResetHealthAndLimbs()
+				elseif !(mcmOptions._resetBosses) 
+					npc.ResetHealthAndLimbs()
+					npc.MoveToMyEditorLocation()
+				else
+					;debug.notification("ResetNPCs: boss and not dead - RESET: " + npc)
+					ResetEnemy(npc)
+					Utility.Wait(0.1)
+				endif
 			else
 				;debug.notification("ResetNPCs: dead boss - ignore: " + npc)
 			endif
@@ -930,6 +980,18 @@ Function PopulateNamedBossList()
 	namedBosses.AddForm(Game.GetForm(0x01FB98))		 ; DLC2MiraakMQ06
 	namedBosses.AddForm(Game.GetForm(0x026196))		 ; DLC2dunHorkerIslandEncHorker
 	namedBosses.AddForm(Game.GetForm(0x0285C3))		 ; DLC2EbonyWarrior
+EndFunction
+
+
+Function PopulateNoResetBossList()
+	noResetBosses.Revert()
+	noResetBosses.AddForm(Game.GetForm(0x0C14B3))		; dunRebelsCairnLvlDraugrBossRedEagle 
+EndFunction
+
+
+Function PopulateNoResetLocationList()
+	noResetLocations.Revert()
+	;noResetLocations.AddForm(Game.GetForm(0x0A828B))		; Rebel's Cairn
 EndFunction
 
 
