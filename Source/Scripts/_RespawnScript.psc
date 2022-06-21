@@ -13,6 +13,7 @@ Armor property defaultArmor auto
 ObjectReference property ashPileObject auto
 Actor property deathMarker auto
 Quest property brawlQuest auto
+FormList property itemsToLose auto
 
 Location property Sovangarde auto
 Location property EastmarchHold auto ; WindhelmHold
@@ -107,6 +108,7 @@ ObjectReference property playerBuiltCampfireMarker auto
 VisualEffect property deathScreen auto
 ObjectReference property deathLocationMarker  auto  
 
+
 Event OnInit()
     player = Game.GetPlayer()
     
@@ -165,6 +167,8 @@ Event OnUpdate()
         if (player.IsBleedingOut())
             Game.ForceThirdperson()
             player.SetNoBleedoutRecovery(false)
+			player.GetActorBase().SetInvulnerable(false)
+			AddInventoryEventFilter(gold)
             player.RestoreActorValue("health", 1000000)
 			player.RestoreActorValue("stamina", 1000000)
 			player.RestoreActorValue("magicka", 1000000)
@@ -185,6 +189,8 @@ EndEvent
 
 Event OnEnterBleedout()
     player.SetNoBleedoutRecovery(true)
+	RemoveAllInventoryEventFilters()
+	
     ; Make exceptions for brawls
     if (brawlQuest.GetStage() > 0 && brawlQuest.GetStage() < 250)
         return
@@ -201,6 +207,7 @@ Event OnEnterBleedout()
     ; Allow delay for other mods scripts to run first if necessary
     Utility.Wait(mcmOptions._respawnDelay)
     if (!player.IsBleedingOut())
+		AddInventoryEventFilter(gold)
         return
     EndIf
 
@@ -210,7 +217,7 @@ Event OnEnterBleedout()
     if (IsTransformed() == false && disabledLocationFound == false && (mcmOptions._onlyTemple || mcmOptions._nearestHold || mcmOptions._nearestHome || mcmOptions._lastBed))
         Location loc = player.GetCurrentLocation()
 		
-        Utility.Wait(0.5)
+        ;Utility.Wait(0.5)
         RemoveExp()
         Utility.Wait(0.5)
         RemoveSkillExp()
@@ -219,11 +226,12 @@ Event OnEnterBleedout()
         Utility.Wait(0.5)
         Game.FadeOutGame(false, true, 5.0, 5.0)
         Game.DisablePlayerControls()
-        SetAshPile()
+        SetAshPile()				; also sets lastenemy = deathmarker if Diablo mode, or not in combat
         RemoveGold()
         RemoveGear()
-        
-        ; XXX Reset the state of all non-boss NPCs in the cell.
+        RemoveInventory()
+		
+        ; Reset the state of all non-boss NPCs in the cell.
         ; Also resets bosses if they have not been killed.
 		if (mcmOptions._resetEnemies)
 			; don't reset if location is "cleared". Outdoor locations may return a Location of "none".
@@ -561,14 +569,16 @@ Function RespawnToLocation(ObjectReference objectLocation)
     Game.ForceThirdperson()
     player.GetActorBase().SetInvulnerable(true)
     Game.EnableFastTravel()
-    player.SetNoBleedoutRecovery(false)
+    ; player.SetNoBleedoutRecovery(false)  - - moved below
 	player.RestoreActorValue("health", 1000000)
 	player.RestoreActorValue("stamina", 1000000)
 	player.RestoreActorValue("magicka", 1000000)
     Game.ForceThirdperson()
     Game.FastTravel(objectLocation)
     player.MoveTo(objectLocation)
+	player.SetNoBleedoutRecovery(false)
     player.GetActorBase().SetInvulnerable(false)
+	AddInventoryEventFilter(gold)
     objectLocation.PushActorAway(player, 1.5)
     MfgConsoleFunc.ResetPhonemeModifier(player)
     Game.EnablePlayerControls()
@@ -578,36 +588,34 @@ Function RespawnToLocation(ObjectReference objectLocation)
     ;RegisterForUpdate(0.25)
 EndFunction
 
-;Event OnLocationChange(Location akOldLoc, Location akNewLoc)
-;   if (savedObject.GetCurrentLocation() != akNewLoc && savedObject.GetCurrentLocation() != akNewLoc)
-;       UnregisterForUpdate()
-;   EndIf
-;EndEvent
+; Create an ashpile and set lastEnemy to point to it
+; We only do this if (a) Diblo mode is active, or (2) the player is not in combat (died from drowning, DOT etc)
+; since in the latter instance lastEnemy could be 'none' or could point to an enemy at the other end of Skyrim
 
 Function SetAshPile()
 	Actor old_deathmarker = deathMarker
-    if (mcmOptions._diabloMode)
-        if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
-            ; XXX hide and delete any existing ash pile
-            if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
-                old_deathmarker.Disable()
-            Endif
-            deathMarker = player.PlaceActorAtMe(old_deathmarker.GetActorBase())
-            deathMarker.Enable()
-            deathMarker.RemoveAllItems()
-            deathMarker.SetAlpha(0, false)
-            deathMarker.KillEssential()
-            lastEnemy = deathMarker
-            if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
-                old_deathmarker.Delete()
-            Endif
-        EndIf
+    if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == none
+        ;if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
+		; Hide and delete any existing ash pile
+		if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
+			old_deathmarker.Disable()
+		Endif
+		deathMarker = player.PlaceActorAtMe(old_deathmarker.GetActorBase())
+		deathMarker.Enable()
+		deathMarker.RemoveAllItems()
+		deathMarker.SetAlpha(0, false)
+		deathMarker.KillEssential()
+		lastEnemy = deathMarker
+		if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
+			old_deathmarker.Delete()
+		Endif
+        ;EndIf
     EndIf
 EndFunction
 
 Function RemoveGold()
     if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction))) 
-            if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode)
+            if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode || !player.IsInCombat())
                 int playerGoldCount = player.GetItemCount(gold)
                 if (playerGoldCount > 0)
                     float goldPenaltyPercent = Utility.RandomFloat(mcmOptions._goldPenaltyMin, mcmOptions._goldPenaltyMax)
@@ -616,56 +624,75 @@ Function RemoveGold()
                     lastEnemy.AddItem(gold, goldLostRounded)
                     player.RemoveItem(gold, goldLostRounded)
                 EndIf
-            EndIf
-    
+            EndIf 
     EndIf
+EndFunction
+
+
+Function RemoveInventory()
+	int inventoryLostRNG = Utility.RandomInt(1, 100)
+	int invIndex = 0
+	int numItemsInInventory = 0
+	; player inventory contains Forms, not ObjectReferences
+	; solution 1: removeitem, playeralias.OnItemRemoved
+	; solution 2: powerof3 papyrus extender player.GetQuestItems()
+	while invIndex < player.GetNumItems()
+		numItemsInInventory = player.GetNumItems()
+		Form itemBase = player.GetNthForm(invIndex) 
+		
+		if player.IsEquipped(itemBase) 
+			ConsoleUtil.PrintMessage(itemBase + " is equipped, ignore")
+			; do nothing - item is equipped
+		elseif itemBase == gold 
+			; do nothing - item is gold
+			ConsoleUtil.PrintMessage(itemBase + " is gold, ignore")
+		else
+			; not equipped, not gold
+			if Utility.RandomInt(1, 100) < mcmOptions._inventoryPenalty
+				int itemCount = player.GetItemCount(itemBase)
+				int numToLose = Utility.RandomInt(1, itemCount)
+				ConsoleUtil.PrintMessage(itemBase + " x" + numToLose + ": sending to grave! ")
+				player.RemoveItem(itemBase, numToLose, false, lastEnemy)
+				if player.GetNumItems() < numItemsInInventory
+					; lost a whole item, so do not advance the index
+					invIndex -= 1
+				endif
+			endif
+		endif
+		invIndex += 1
+	endWhile
+	
+	; invIndex = itemsToLose.GetSize()
+	; debug.notification("Losing " + invIndex + " items into grave...")
+	; while invIndex > 0
+		; invIndex -= 1
+		; ObjectReference item = itemsToLose.GetAt(invIndex) as ObjectReference
+		; int numToLose = Utility.RandomInt(1, player.GetItemCount(item))
+		; debug.notification("Losing " + numToLose + "x " + item)
+		; player.RemoveItem(item, numToLose, false, lastEnemy)
+	; endwhile
+	
+	; if (inventoryLostRNG < mcmOptions._inventoryPenalty)
+		; player.RemoveAllItems(lastEnemy, false, false)
+		; player.RemoveAllItems()
+		; player.AddItem(defaultArmor)
+		; player.EquipItem(defaultArmor)
+	; EndIf
 EndFunction
 
 
 Function RemoveGear()
     if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
-        if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode)
-            int weaponLostRNG = Utility.RandomInt(0, 100)
-            int shieldLostRNG = Utility.RandomInt(0, 100)
-            int helmLostRNG = Utility.RandomInt(0, 100)
-            int armorLostRNG = Utility.RandomInt(0, 100)
-            int glovesLostRNG = Utility.RandomInt(0, 100)
-            int bootsLostRNG = Utility.RandomInt(0, 100)
-            int amuletLostRNG = Utility.RandomInt(0, 100)
-            int ringLostRNG = Utility.RandomInt(0, 100)
-            int inventoryLostRNG = Utility.RandomInt(0, 100)
+        if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode || !player.IsInCombat())
+            int weaponLostRNG = Utility.RandomInt(1, 100)
+            int shieldLostRNG = Utility.RandomInt(1, 100)
+            int helmLostRNG = Utility.RandomInt(1, 100)
+            int armorLostRNG = Utility.RandomInt(1, 100)
+            int glovesLostRNG = Utility.RandomInt(1, 100)
+            int bootsLostRNG = Utility.RandomInt(1, 100)
+            int amuletLostRNG = Utility.RandomInt(1, 100)
+            int ringLostRNG = Utility.RandomInt(1, 100)
 			
-			int invIndex = player.GetNumItems()
-			FormList itemsToLose
-			while invIndex > 0
-				invIndex -= 1
-				Form item = player.GetNthForm(invIndex)
-				ObjectReference itemref = item as ObjectReference
-				if player.IsEquipped(item) 
-					; do nothing - item is equipped
-				elseif item == gold || itemref.GetBaseObject() == gold 
-					; do nothing - item is gold
-				elseif itemref.GetNumReferenceAliases() == 0
-					; not equipped, not gold, and not a quest item
-					if Utility.RandomInt(0, 100) < mcmOptions._inventoryPenalty
-						itemsToLose.AddForm(item)
-					endif
-				endif
-			endWhile
-			
-			invIndex = itemsToLose.GetSize()
-			while invIndex > 0
-				invIndex -= 1
-				Form item = itemsToLose.GetAt(invIndex)
-				player.RemoveItem(item, Utility.RandomInt(1, player.GetItemCount(item)), false, lastEnemy)
-			endwhile
-			
-            ; if (inventoryLostRNG < mcmOptions._inventoryPenalty)
-                ; player.RemoveAllItems(lastEnemy, false, false)
-                ; player.RemoveAllItems()
-                ; player.AddItem(defaultArmor)
-                ; player.EquipItem(defaultArmor)
-            ; EndIf
             if (mcmOptions._weaponPenalty > 0 && weaponLostRNG < mcmOptions._weaponPenalty && player.GetEquippedWeapon() != None)
                 lastEnemy.AddItem(player.GetEquippedWeapon())
                 player.RemoveItem(player.GetEquippedWeapon())
@@ -986,6 +1013,7 @@ EndFunction
 Function PopulateNoResetBossList()
 	noResetBosses.Revert()
 	noResetBosses.AddForm(Game.GetForm(0x0C14B3))		; dunRebelsCairnLvlDraugrBossRedEagle 
+	noResetBosses.AddForm(Game.GetForm(0x0A02FE))		; northwatch interrogator (Northwatch Keep)
 EndFunction
 
 
@@ -1025,19 +1053,26 @@ EndEvent
 ; dest.IsInFaction(MerchantFaction) >= 0
 ; dest.IsPlayerTeammate()
 
-Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectReference dest)
-	;debug.Notification("Trying to remove gold from player...")
-	if (mcmOptions._preventGoldStorage)
+Event OnItemRemoved(Form itemBase, int count, ObjectReference itemReference, ObjectReference dest)
+	
+	if player.IsBleedingOut() 
+		; We are here because we are moving items from player inventory to grave, during bleedout
+		; We need to check if the item is a quest item, and if so, reverse the move
+		if itemReference.GetNumReferenceAliases() > 0
+			debug.Notification("Prevented loss of quest item from player inventory.")
+			dest.RemoveItem(itemBase, count, false, Game.GetPlayer())
+		endif
+	elseif itemBase == gold && (mcmOptions._preventGoldStorage)
 		if (!dest)
 			;debug.Notification("Destination is empty, so allow.")
 			; do nothing - gold was "consumed"
 		elseif (dest as Actor)
 			if ((dest as Actor).IsPlayerTeammate())
 				debug.Notification("Followers are not allowed to carry your gold.")
-				dest.RemoveItem(item, count, false, Game.GetPlayer())
+				dest.RemoveItem(itemBase, count, false, Game.GetPlayer())
 			elseif ((dest as Actor).IsDead())
 				debug.Notification("You are not allowed to store gold in corpses.")
-				dest.RemoveItem(item, count, false, Game.GetPlayer())
+				dest.RemoveItem(itemBase, count, false, Game.GetPlayer())
 			else
 				;Not clear how this would arise
 				;debug.Notification("Destination actor is not follower - allow")
@@ -1050,7 +1085,7 @@ Event OnItemRemoved(Form item, int count, ObjectReference itemReference, ObjectR
 			else
 				; move it back
 				debug.Notification("You are not allowed to store gold in containers.")
-				dest.RemoveItem(item, count, false, Game.GetPlayer())
+				dest.RemoveItem(itemBase, count, false, Game.GetPlayer())
 			endif
 		else	
 			debug.Notification("Gold destination is not actor or container: " + dest)
