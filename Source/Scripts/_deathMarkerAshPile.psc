@@ -24,7 +24,9 @@ Bool property bSetAlphaToZeroEarly = False Auto
 _RespawnScript property respawnScript auto
 			
 ; XXX
-Quest Property deathMarkerQuest Auto  
+Quest Property deathMarkerQuest Auto      ; quest given to player, to retrieve belongings from grave
+ObjectReference Property GraveActivator  Auto  
+ObjectReference property GraveContainer auto
 
 
 Event OnInit()
@@ -99,4 +101,5 @@ Event OnItemRemoved(Form base, int count, ObjectReference itemRef, ObjectReferen
         endif
     endif
 EndEvent
+
 

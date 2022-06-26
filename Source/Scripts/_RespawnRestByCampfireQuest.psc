@@ -12,7 +12,7 @@ Event OnSit(ObjectReference furn)
 		
 	if ((furnBase == _RBCModFire1) || (furnBase == _RBCModFire2))
 		;debug.Notification("Sitting at campfire! (Rest By Campfire.esp)")
-		_RespawnQuest.PlaceRespawnMarkerAtCampfire()
+		_RespawnQuest.PlaceRespawnMarkerAtCampfire(false)
 		return
 	endif
 	

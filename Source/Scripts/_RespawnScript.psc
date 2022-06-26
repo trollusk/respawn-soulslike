@@ -12,6 +12,15 @@ Faction property creatureFaction auto
 Armor property defaultArmor auto
 ObjectReference property ashPileObject auto
 Actor property deathMarker auto
+; XXX
+ObjectReference property graveContainer auto
+ObjectReference property graveActivator auto
+ObjectReference property graveLight auto
+Quest Property deathMarkerQuest Auto      ; quest given to player, to retrieve belongings from grave
+ReferenceAlias property deathMarkerQuestTarget auto
+Spell property healingSpell auto			; failsafe in case respawning takes too long due to script lag
+Spell property areaCalmSpell auto
+
 Quest property brawlQuest auto
 FormList property itemsToLose auto
 
@@ -70,6 +79,7 @@ Location property Volskygge auto
 Location property EastEmpireCompany auto
 Location property AbandonedHouse auto
 Location property AzurasStarInterior auto
+Location property DeadMensRespite auto
 
 ; Werewolf/werebear/vampire
 Race property werewolfRace auto
@@ -217,6 +227,9 @@ Event OnEnterBleedout()
     if (IsTransformed() == false && disabledLocationFound == false && (mcmOptions._onlyTemple || mcmOptions._nearestHold || mcmOptions._nearestHome || mcmOptions._lastBed))
         Location loc = player.GetCurrentLocation()
 		
+		healingSpell.Cast(player)
+		areaCalmSpell.Cast(player)
+		
         ;Utility.Wait(0.5)
         RemoveExp()
         Utility.Wait(0.5)
@@ -230,6 +243,22 @@ Event OnEnterBleedout()
         RemoveGold()
         RemoveGear()
         RemoveInventory()
+		
+		if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == none
+			; delete the grave if it's empty
+			if graveContainer.GetNumItems() < 1
+				graveActivator.Disable()
+				;graveLight.Disable()
+			elseif mcmOptions._giveDeathMarkerQuest
+				deathMarkerQuest.Stop()
+				;(deathMarkerQuest.GetAliasByName("DeathMarkerRef") as ReferenceAlias).ForceRefTo(self)
+				;deathMarkerQuestTarget.ForceRefTo(self)
+				utility.wait(0.1)    
+				deathMarkerQuest.Start()
+				deathMarkerQuest.SetObjectiveDisplayed(10)
+				deathMarkerQuest.SetStage(10)
+			endif
+		endif
 		
         ; Reset the state of all non-boss NPCs in the cell.
         ; Also resets bosses if they have not been killed.
@@ -578,11 +607,14 @@ Function RespawnToLocation(ObjectReference objectLocation)
     player.MoveTo(objectLocation)
 	player.SetNoBleedoutRecovery(false)
     player.GetActorBase().SetInvulnerable(false)
+	player.DispelAllSpells()
 	AddInventoryEventFilter(gold)
     objectLocation.PushActorAway(player, 1.5)
     MfgConsoleFunc.ResetPhonemeModifier(player)
     Game.EnablePlayerControls()
-    lastEnemy.StopCombat()
+    if lastEnemy
+		lastEnemy.StopCombat()
+	endif
     player.StopCombatAlarm()
     ;savedObject = objectLocation
     ;RegisterForUpdate(0.25)
@@ -593,39 +625,49 @@ EndFunction
 ; since in the latter instance lastEnemy could be 'none' or could point to an enemy at the other end of Skyrim
 
 Function SetAshPile()
-	Actor old_deathmarker = deathMarker
     if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == none
-        ;if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
-		; Hide and delete any existing ash pile
-		if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
-			old_deathmarker.Disable()
-		Endif
-		deathMarker = player.PlaceActorAtMe(old_deathmarker.GetActorBase())
-		deathMarker.Enable()
-		deathMarker.RemoveAllItems()
-		deathMarker.SetAlpha(0, false)
-		deathMarker.KillEssential()
-		lastEnemy = deathMarker
-		if (old_deathmarker && mcmOptions._destroyAshpileOnDeath)
-			old_deathmarker.Delete()
-		Endif
-        ;EndIf
+		graveActivator.moveto(player)
+		graveActivator.Enable()
+		;graveLight.Disable()
+		;graveLight.moveto(player, 0.0, 0.0, 50.0)
+		;graveLight.Enable()
+				
+		if mcmOptions._destroyAshpileOnDeath
+			graveContainer.RemoveAllItems()
+		endif
     EndIf
 EndFunction
 
+
 Function RemoveGold()
-    if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction))) 
-            if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode || !player.IsInCombat())
-                int playerGoldCount = player.GetItemCount(gold)
-                if (playerGoldCount > 0)
-                    float goldPenaltyPercent = Utility.RandomFloat(mcmOptions._goldPenaltyMin, mcmOptions._goldPenaltyMax)
-                    float goldLost = playerGoldCount * goldPenaltyPercent * 0.01
-                    int goldLostRounded = Math.Floor(goldLost)
-                    lastEnemy.AddItem(gold, goldLostRounded)
-                    player.RemoveItem(gold, goldLostRounded)
-                EndIf
-            EndIf 
-    EndIf
+	int playerGoldCount = player.GetItemCount(gold)
+	int goldPenaltyPercent = Utility.RandomInt(Math.Floor(mcmOptions._goldPenaltyMin), Math.Floor(mcmOptions._goldPenaltyMax))
+	int goldLost = Math.Floor(playerGoldCount * goldPenaltyPercent * 0.01)
+	
+	if (playerGoldCount > 0)
+		if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == None
+			; send gold to grave
+			graveContainer.AddItem(gold, goldLost)
+			player.RemoveItem(gold, goldLost, true)
+		elseif !mcmOptions._excludeCreatures || !lastEnemy.IsInFaction(creatureFaction)
+			; give gold to lastenemy
+			lastEnemy.AddItem(gold, goldLost)
+			player.RemoveItem(gold, goldLost, true)
+		endif
+	endif
+	
+    ; if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction))) 
+		; if (mcmOptions._diabloMode || !player.IsInCombat() || (lastEnemy != None && !lastEnemy.IsDead()))
+			; int playerGoldCount = player.GetItemCount(gold)
+			; if (playerGoldCount > 0)
+				; float goldPenaltyPercent = Utility.RandomFloat(mcmOptions._goldPenaltyMin, mcmOptions._goldPenaltyMax)
+				; float goldLost = playerGoldCount * goldPenaltyPercent * 0.01
+				; int goldLostRounded = Math.Floor(goldLost)
+				; lastEnemy.AddItem(gold, goldLostRounded)
+				; player.RemoveItem(gold, goldLostRounded)
+			; EndIf
+		; EndIf 
+    ; EndIf
 EndFunction
 
 
@@ -633,26 +675,37 @@ Function RemoveInventory()
 	int inventoryLostRNG = Utility.RandomInt(1, 100)
 	int invIndex = 0
 	int numItemsInInventory = 0
+	ObjectReference dest
+	
 	; player inventory contains Forms, not ObjectReferences
 	; solution 1: removeitem, playeralias.OnItemRemoved
 	; solution 2: powerof3 papyrus extender player.GetQuestItems()
+	
+	if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == None
+		; send gear to grave
+		dest = graveContainer
+	elseif !mcmOptions._excludeCreatures || !lastEnemy.IsInFaction(creatureFaction)
+		; give gear to lastenemy
+		dest = lastEnemy
+	else
+		; in combat, but enemy is a creature, and excludecreatures is true
+		return
+	endif
+
 	while invIndex < player.GetNumItems()
 		numItemsInInventory = player.GetNumItems()
 		Form itemBase = player.GetNthForm(invIndex) 
 		
 		if player.IsEquipped(itemBase) 
-			ConsoleUtil.PrintMessage(itemBase + " is equipped, ignore")
 			; do nothing - item is equipped
 		elseif itemBase == gold 
 			; do nothing - item is gold
-			ConsoleUtil.PrintMessage(itemBase + " is gold, ignore")
 		else
 			; not equipped, not gold
 			if Utility.RandomInt(1, 100) < mcmOptions._inventoryPenalty
 				int itemCount = player.GetItemCount(itemBase)
 				int numToLose = Utility.RandomInt(1, itemCount)
-				ConsoleUtil.PrintMessage(itemBase + " x" + numToLose + ": sending to grave! ")
-				player.RemoveItem(itemBase, numToLose, false, lastEnemy)
+				player.RemoveItem(itemBase, numToLose, true, dest)
 				if player.GetNumItems() < numItemsInInventory
 					; lost a whole item, so do not advance the index
 					invIndex -= 1
@@ -682,61 +735,74 @@ EndFunction
 
 
 Function RemoveGear()
-    if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
-        if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode || !player.IsInCombat())
-            int weaponLostRNG = Utility.RandomInt(1, 100)
-            int shieldLostRNG = Utility.RandomInt(1, 100)
-            int helmLostRNG = Utility.RandomInt(1, 100)
-            int armorLostRNG = Utility.RandomInt(1, 100)
-            int glovesLostRNG = Utility.RandomInt(1, 100)
-            int bootsLostRNG = Utility.RandomInt(1, 100)
-            int amuletLostRNG = Utility.RandomInt(1, 100)
-            int ringLostRNG = Utility.RandomInt(1, 100)
-			
-            if (mcmOptions._weaponPenalty > 0 && weaponLostRNG < mcmOptions._weaponPenalty && player.GetEquippedWeapon() != None)
-                lastEnemy.AddItem(player.GetEquippedWeapon())
-                player.RemoveItem(player.GetEquippedWeapon())
-                if (player.GetEquippedWeapon(true) != None)
-                    lastEnemy.AddItem(player.GetEquippedWeapon(true))
-                    player.RemoveItem(player.GetEquippedWeapon(true))
-                EndIf
-            EndIf
-            if (mcmOptions._shieldPenalty > 0 && shieldLostRNG < mcmOptions._shieldPenalty && player.GetEquippedWeapon(true) != None)
-                lastEnemy.AddItem(player.GetEquippedWeapon(true))
-                player.RemoveItem(player.GetEquippedWeapon(true))
-            EndIf
-            if (mcmOptions._helmPenalty > 0 && helmLostRNG < mcmOptions._helmPenalty && player.GetEquippedArmorInSlot(30) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(30))
-                player.RemoveItem(player.GetEquippedArmorInSlot(30))
-            EndIf
-            if (mcmOptions._helmPenalty > 0 && helmLostRNG < mcmOptions._helmPenalty && player.GetEquippedArmorInSlot(42) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(42))
-                player.RemoveItem(player.GetEquippedArmorInSlot(42))
-            EndIf
-            if (mcmOptions._armorPenalty > 0 && armorLostRNG < mcmOptions._armorPenalty && player.GetEquippedArmorInSlot(32) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(32))
-                player.RemoveItem(player.GetEquippedArmorInSlot(32))
-                player.AddItem(defaultArmor)
-                player.EquipItem(defaultArmor)
-            EndIf
-            if (mcmOptions._glovesPenalty > 0 && glovesLostRNG < mcmOptions._glovesPenalty && player.GetEquippedArmorInSlot(33) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(33))
-                player.RemoveItem(player.GetEquippedArmorInSlot(33))
-            EndIf
-            if (mcmOptions._amuletPenalty > 0 && amuletLostRNG < mcmOptions._amuletPenalty && player.GetEquippedArmorInSlot(35) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(35))
-                player.RemoveItem(player.GetEquippedArmorInSlot(35))
-            EndIf
-            if (mcmOptions._ringPenalty > 0 && ringLostRNG < mcmOptions._ringPenalty && player.GetEquippedArmorInSlot(36) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(36))
-                player.RemoveItem(player.GetEquippedArmorInSlot(36))
-            EndIf
-            if (mcmOptions._bootsPenalty > 0 && bootsLostRNG < mcmOptions._bootsPenalty && player.GetEquippedArmorInSlot(37) != None)
-                lastEnemy.AddItem(player.GetEquippedArmorInSlot(37))
-                player.RemoveItem(player.GetEquippedArmorInSlot(37))
-            EndIf
-        EndIf
-    EndIf
+	ObjectReference dest
+	int weaponLostRNG = Utility.RandomInt(0, 100)
+	int shieldLostRNG = Utility.RandomInt(0, 100)
+	int helmLostRNG = Utility.RandomInt(0, 100)
+	int armorLostRNG = Utility.RandomInt(0, 100)
+	int glovesLostRNG = Utility.RandomInt(0, 100)
+	int bootsLostRNG = Utility.RandomInt(0, 100)
+	int amuletLostRNG = Utility.RandomInt(0, 100)
+	int ringLostRNG = Utility.RandomInt(0, 100)
+
+	if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == None
+		; send gear to grave
+		dest = graveContainer
+	elseif !mcmOptions._excludeCreatures || !lastEnemy.IsInFaction(creatureFaction)
+		; give gear to lastenemy
+		dest = lastEnemy
+	else
+		; in combat, but enemy is a creature, and excludecreatures is true
+		return
+	endif
+	
+    ; if (!mcmOptions._excludeCreatures || (mcmOptions._excludeCreatures && !lastEnemy.IsInFaction(creatureFaction)))
+        ; if ((lastEnemy != None && !lastEnemy.IsDead()) || mcmOptions._diabloMode || !player.IsInCombat())
+	
+	if (mcmOptions._weaponPenalty > 0 && weaponLostRNG < mcmOptions._weaponPenalty && player.GetEquippedWeapon() != None)
+		dest.AddItem(player.GetEquippedWeapon())
+		player.RemoveItem(player.GetEquippedWeapon(), 1, true)
+		if (player.GetEquippedWeapon(true) != None)
+			dest.AddItem(player.GetEquippedWeapon(true))
+			player.RemoveItem(player.GetEquippedWeapon(true), 1, true)
+		EndIf
+	EndIf
+	if (mcmOptions._shieldPenalty > 0 && shieldLostRNG < mcmOptions._shieldPenalty && player.GetEquippedWeapon(true) != None)
+		dest.AddItem(player.GetEquippedWeapon(true))
+		player.RemoveItem(player.GetEquippedWeapon(true), 1, true)
+	EndIf
+	if (mcmOptions._helmPenalty > 0 && helmLostRNG < mcmOptions._helmPenalty && player.GetEquippedArmorInSlot(30) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(30))
+		player.RemoveItem(player.GetEquippedArmorInSlot(30), 1, true)
+	EndIf
+	if (mcmOptions._helmPenalty > 0 && helmLostRNG < mcmOptions._helmPenalty && player.GetEquippedArmorInSlot(42) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(42))
+		player.RemoveItem(player.GetEquippedArmorInSlot(42), 1, true)
+	EndIf
+	if (mcmOptions._armorPenalty > 0 && armorLostRNG < mcmOptions._armorPenalty && player.GetEquippedArmorInSlot(32) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(32))
+		player.RemoveItem(player.GetEquippedArmorInSlot(32), 1, true)
+		player.AddItem(defaultArmor)
+		player.EquipItem(defaultArmor)
+	EndIf
+	if (mcmOptions._glovesPenalty > 0 && glovesLostRNG < mcmOptions._glovesPenalty && player.GetEquippedArmorInSlot(33) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(33))
+		player.RemoveItem(player.GetEquippedArmorInSlot(33), 1, true)
+	EndIf
+	if (mcmOptions._amuletPenalty > 0 && amuletLostRNG < mcmOptions._amuletPenalty && player.GetEquippedArmorInSlot(35) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(35))
+		player.RemoveItem(player.GetEquippedArmorInSlot(35), 1, true)
+	EndIf
+	if (mcmOptions._ringPenalty > 0 && ringLostRNG < mcmOptions._ringPenalty && player.GetEquippedArmorInSlot(36) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(36))
+		player.RemoveItem(player.GetEquippedArmorInSlot(36), 1, true)
+	EndIf
+	if (mcmOptions._bootsPenalty > 0 && bootsLostRNG < mcmOptions._bootsPenalty && player.GetEquippedArmorInSlot(37) != None)
+		dest.AddItem(player.GetEquippedArmorInSlot(37))
+		player.RemoveItem(player.GetEquippedArmorInSlot(37), 1, true)
+	EndIf
+        ; EndIf
+    ; EndIf
 EndFunction
 
 Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked)
@@ -771,6 +837,8 @@ Bool Function CheckForDisabledLocation()
     ElseIf (player.IsInLocation(AbandonedHouse))
         return true
     ElseIf (player.IsInLocation(AzurasStarInterior))
+        return true
+    ElseIf (player.IsInLocation(DeadMensRespite))
         return true
     EndIf
     return false
@@ -1096,11 +1164,11 @@ Event OnItemRemoved(Form itemBase, int count, ObjectReference itemReference, Obj
 EndEvent
 
 
-Function PlaceRespawnMarkerAtCampfire()
+Function PlaceRespawnMarkerAtCampfire(bool playerBuilt = false)
 	PlayerRespawnMarker.moveto(player)
 	playerRespawnMarkerInitialized = true
 	debug.Notification("You will respawn at this campfire if you are killed.")
-	PlaceCampfireMapMarker()
+	PlaceCampfireMapMarker(playerBuilt)
 EndFunction
 
 
