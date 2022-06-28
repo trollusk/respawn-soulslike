@@ -1,6 +1,7 @@
 Scriptname _RespawnOverhaulMCM extends SKI_ConfigBase  
 
 Quest property _RespawnOverhaulQuest auto
+_RespawnScript property RespawnScript auto
 Quest property _RespawnDeathMarkerQuest auto
 
 bool property _enableMod auto
@@ -219,7 +220,7 @@ Event OnPageReset(string page)
 		iNearestHome = AddToggleOption("Nearest home", nearestHome)
 		iRespawnDelay = AddSliderOption("Respawn delay (s)", respawnDelay)
 		
-		iLastBed = AddToggleOption("Last Bed  (" + markerCell.GetName() + ")", lastBed)
+		iLastBed = AddToggleOption("Last Bed or campfire (" + markerCell.GetName() + ")", lastBed)
 
 		;AddHeaderOption("Push key")
 		;iPushKey = AddKeyMapOption("Push key", pushKey)
@@ -279,12 +280,24 @@ Event OnPageReset(string page)
 		iResetBosses = AddToggleOption("  ...Also reset nearby bosses (if alive)", resetBosses)
 		
 		if (npc)
-			AddTextOption("Targeted NPC", npc.GetName(), OPTION_FLAG_DISABLED)
-			AddTextOption("Unique?", (npc.GetBaseObject() as ActorBase).IsUnique(), OPTION_FLAG_DISABLED)
-			AddTextOption("Boss Keyword?", npc.HasRefType(locRefTypeBoss), OPTION_FLAG_DISABLED)
-			AddTextOption("DLC2Boss1 Keyword?", npc.HasRefType(locRefTypeDLC2Boss1), OPTION_FLAG_DISABLED)
-			AddTextOption("Hostile to player?", npc.IsHostileToActor(Game.GetPlayer()), OPTION_FLAG_DISABLED)
+			string eID = PO3_SKSEFunctions.GetFormEditorID(npc.GetActorBase())
+			SetCursorPosition(1)		; top of right column
+			;RespawnScript.PopulateNoResetNPCList()
+			;RespawnScript.DumpFormListToConsole()
+			AddHeaderOption("Debug info")
+			AddTextOption("Targeted NPC", npc.GetDisplayName(), OPTION_FLAG_DISABLED)
+			AddTextOption("Editor ID", eID, OPTION_FLAG_DISABLED)
+			;AddTextOption("Internal RefID", PO3_SKSEFunctions.GetFormFromEditorID(eid).GetFormID(), OPTION_FLAG_DISABLED)
+			AddTextOption("ActorBase RefID", npc.GetActorBase().GetFormID(), OPTION_FLAG_DISABLED)
 			AddTextOption("Player teammate?", npc.IsPlayerTeammate(), OPTION_FLAG_DISABLED)
+			AddTextOption("Boss?", RespawnScript.IsBoss(npc), OPTION_FLAG_DISABLED)
+			AddTextOption("  Unique?", (npc.GetActorBase()).IsUnique(), OPTION_FLAG_DISABLED)
+			AddTextOption("  Boss Keyword?", npc.HasRefType(locRefTypeBoss) || npc.HasRefType(locRefTypeDLC2Boss1), OPTION_FLAG_DISABLED)
+			AddTextOption("  Boss race?", RespawnScript.bossRaces.HasForm(npc.GetRace()), OPTION_FLAG_DISABLED)
+			AddTextOption("  On named boss list?", RespawnScript.namedBosses.HasForm(npc), OPTION_FLAG_DISABLED)
+			AddTextOption("  On no-reset list?", RespawnScript.BlacklistedForReset(npc), OPTION_FLAG_DISABLED)
+			;AddTextOption("  No-reset blacklist npc.base?", RespawnScript.BlacklistedForReset(npc.GetActorBase() as Form), OPTION_FLAG_DISABLED)
+			;AddTextOption("  No-reset blacklist eid?", RespawnScript.BlacklistedForReset(PO3_SKSEFunctions.GetFormFromEditorID(eid) as Form), OPTION_FLAG_DISABLED)
 		endif
 	ElseIf(page == "Uninstall")
 		iUninstall = AddTextOption("Uninstall mod", none, OPTION_FLAG_NONE)
@@ -708,6 +721,7 @@ Event OnOptionSliderAccept(int option, float value)
 			SetSliderOptionValue(iInventoryPenalty, inventoryPenalty)
 		EndIf
 	EndIf
+	ForcePageReset()
 EndEvent
 
 Event OnKeyMapChange(int option, int keyCode, string conflictControl, string conflictName)

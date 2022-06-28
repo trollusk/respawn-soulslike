@@ -93,10 +93,11 @@ Cell Property PlayerRespawnMarkerCell  Auto
 LocationRefType property locRefTypeBoss auto
 LocationRefType property locRefTypeDLC2Boss1 auto
 
-FormList bossRaces
-FormList namedBosses
-FormList noResetBosses
-FormList noResetLocations
+; FormLists must exist in the esp!
+FormList property bossRaces auto
+FormList property namedBosses auto
+FormList property noResetNPCs auto
+FormList property noResetLocations auto
 bool Property playerRespawnMarkerInitialized auto
 
 ; Furniture property _RBCModFire1 auto
@@ -125,9 +126,9 @@ Event OnInit()
     player.GetActorBase().SetEssential()
     player.SetNoBleedoutRecovery(false)
 
-	PopulateBossRaceList()
+	;PopulateBossRaceList()
 	PopulateNamedBossList()
-	PopulateNoResetBossList()
+	PopulateNoResetNPCList()
 	PopulateNoResetLocationList()
 	
     RegisterForSleep()
@@ -140,9 +141,9 @@ Event OnPlayerLoadGame()
     player.GetActorBase().SetEssential()
     player.SetNoBleedoutRecovery(false)
 	
-	PopulateBossRaceList()
+	;PopulateBossRaceList()
 	PopulateNamedBossList()
-	PopulateNoResetBossList()
+	PopulateNoResetNPCList()
 	PopulateNoResetLocationList()
 	
 	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
@@ -227,18 +228,26 @@ Event OnEnterBleedout()
     if (IsTransformed() == false && disabledLocationFound == false && (mcmOptions._onlyTemple || mcmOptions._nearestHold || mcmOptions._nearestHome || mcmOptions._lastBed))
         Location loc = player.GetCurrentLocation()
 		
+		if lastEnemy
+			lastEnemy.StopCombat()
+		endif
+		player.StopCombatAlarm()
+
 		healingSpell.Cast(player)
-		areaCalmSpell.Cast(player)
+		;areaCalmSpell.Cast(player)
 		
         ;Utility.Wait(0.5)
         RemoveExp()
-        Utility.Wait(0.5)
+        ;Utility.Wait(0.5)
         RemoveSkillExp()
-        Utility.Wait(0.5)
+        ;Utility.Wait(0.5)
         RemoveDragonSouls()
-        Utility.Wait(0.5)
-        Game.FadeOutGame(false, true, 5.0, 5.0)
+        ;Utility.Wait(0.5)
+		;ConsoleUtil.PrintMessage("about to disable player controls")
         Game.DisablePlayerControls()
+		;ConsoleUtil.PrintMessage("about to fade in")
+        Game.FadeOutGame(false, true, 5.0, 5.0)		; wait 5s, then fade IN for 5s
+		;ConsoleUtil.PrintMessage("about to make grave and remove items")
         SetAshPile()				; also sets lastenemy = deathmarker if Diablo mode, or not in combat
         RemoveGold()
         RemoveGear()
@@ -249,6 +258,7 @@ Event OnEnterBleedout()
 			if graveContainer.GetNumItems() < 1
 				graveActivator.Disable()
 				;graveLight.Disable()
+				deathMarkerQuest.Stop()
 			elseif mcmOptions._giveDeathMarkerQuest
 				deathMarkerQuest.Stop()
 				;(deathMarkerQuest.GetAliasByName("DeathMarkerRef") as ReferenceAlias).ForceRefTo(self)
@@ -265,337 +275,344 @@ Event OnEnterBleedout()
 		if (mcmOptions._resetEnemies)
 			; don't reset if location is "cleared". Outdoor locations may return a Location of "none".
 			if (!loc || !(loc.IsCleared()))
+				;ConsoleUtil.PrintMessage("about to reset enemies")
 				ResetEnemiesInCell()
 			endif
         endif
 		
-        Utility.Wait(1.25)
-        if (player.IsInLocation(Sovangarde) == false)
-            if (mcmOptions._lastBed == true)
-				if PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell
-					; respawn marker is still in the "Elsweyr" default cell
-					debug.notification("No bed or campfire has been set as a respawn point. Respawning to Temple of Kynareth instead.")
-					RespawnToLocation(altarTempleOfKynareth)
-				else
-					RespawnToLocation(PlayerRespawnMarker)
-				endif
-            ElseIf (mcmOptions._onlyTemple == true)
-                RespawnToLocation(altarTempleOfKynareth)    
-            ElseIf (mcmOptions._nearestHome == true)
-                if (mcmOptions._nearestHold == false)
-                    if (player.IsInLocation(EastmarchHold))
-                        if (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ;ElseIF (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(FalkreathHold))
-                        ;if (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        If (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(HaafingarHold))
-                        if (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(HjallmarchHold))
-                        ;if (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        If (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(PaleHold))
-                        ;if (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        If (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(ReachHold))
-                        if (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ElseIf (honeysideLocation.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(RiftHold))
-                        if (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(WinterholdHold))
-                        ;if (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        If (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    ElseIf (player.IsInLocation(RavenRockHold))
-                        if (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ;ElseIF (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    Else
-                        if (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        ;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(lakeviewManorLocation)
-                        ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        ;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(windstadManorLocation)
-                        ;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
-                            ;RespawnToLocation(heljarchenHallLocation)
-                        ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    EndIf
-                Else ; Nearest hold + nearest home
-                    if (player.IsInLocation(EastmarchHold))
-                        if (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadWindhelm)
-                        EndIf
-                    ElseIf (player.IsInLocation(FalkreathHold))
-                        if  (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadFalkreath)
-                        EndIf
-                    ElseIf (player.IsInLocation(HaafingarHold))
-                        if (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadSolitude)
-                        EndIf
-                    ElseIf (player.IsInLocation(HjallmarchHold))
-                        if (proudspireManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(proudspireManorLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadSolitude)
-                        EndIf
-                    ElseIf (player.IsInLocation(PaleHold))
-                        if (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadWindhelm)
-                        EndIf
-                    ElseIf (player.IsInLocation(ReachHold))
-                        if (vlindrelHallCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(vlindrelHallLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadMarkarth)
-                        EndIf
-                    ElseIf (player.IsInLocation(WinterholdHold))
-                        if (hjerimCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(hjerimLocation)
-                        Else
-                            RespawnToLocation(hallsOfTheDeadWindhelm)
-                        EndIf
-                    ElseIf (player.IsInLocation(RiftHold))
-                        if (honeysideCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(honeysideLocation)
-                        Else
-                            RespawnToLocation(hallsfOfTheDeadRiften)
-                        EndIf
-                    ElseIf (player.IsInLocation(RavenRockHold))
-                        if (severinManorCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(severinManorLocation)
-                        Else
-                            RespawnToLocation(ravenRock)
-                        EndIf
-                    Else
-                        if (breezehomeCell.GetFactionOwner() == playerFaction)
-                            RespawnToLocation(breezehomeLocation)
-                        Else
-                            RespawnToLocation(altarTempleOfKynareth)
-                        EndIf
-                    EndIf
-                EndIf
-            ElseIf (mcmOptions._nearestHold == true)
-                if (player.IsInLocation(EastmarchHold) || player.IsInLocation(PaleHold) || player.IsInLocation(WinterholdHold))
-                    RespawnToLocation(hallsOfTheDeadWindhelm)
-                ElseIf (player.IsInLocation(FalkreathHold))
-                    RespawnToLocation(hallsOfTheDeadFalkreath)
-                ElseIf (player.IsInLocation(HaafingarHold) || player.IsInLocation(HjallmarchHold))
-                    RespawnToLocation(hallsOfTheDeadSolitude)
-                ElseIf (player.IsInLocation(ReachHold))
-                    RespawnToLocation(hallsOfTheDeadMarkarth)
-                ElseIf (player.IsInLocation(RiftHold))
-                    RespawnToLocation(hallsfOfTheDeadRiften)
-                ElseIf (player.IsInLocation(RavenRockHold))
-                    RespawnToLocation(ravenRock)
-                Else
-                    RespawnToLocation(altarTempleOfKynareth)
-                EndIf   
-            Else
-                Debug.MessageBox("Something went wrong")
-            EndIf
-        Else
-            RespawnToLocation(sovangardeRespawn)
-        EndIf
+        ;Utility.Wait(1.25)
+		TravelToRespawnPoint()
     Else
         player.KillEssential()
     EndIf
 EndEvent
 
+
+Function TravelToRespawnPoint()
+	if (player.IsInLocation(Sovangarde) == false)
+		if (mcmOptions._lastBed == true)
+			if PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell
+				; respawn marker is still in the "Elsweyr" default cell
+				debug.notification("No bed or campfire has been set as a respawn point. Respawning to Temple of Kynareth instead.")
+				RespawnToLocation(altarTempleOfKynareth)
+			else
+				RespawnToLocation(PlayerRespawnMarker)
+			endif
+		ElseIf (mcmOptions._onlyTemple == true)
+			RespawnToLocation(altarTempleOfKynareth)    
+		ElseIf (mcmOptions._nearestHome == true)
+			if (mcmOptions._nearestHold == false)
+				if (player.IsInLocation(EastmarchHold))
+					if (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					;ElseIF (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(FalkreathHold))
+					;if (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					If (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(HaafingarHold))
+					if (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(HjallmarchHold))
+					;if (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					If (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(PaleHold))
+					;if (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					If (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(ReachHold))
+					if (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					ElseIf (honeysideLocation.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(RiftHold))
+					if (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(WinterholdHold))
+					;if (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					If (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				ElseIf (player.IsInLocation(RavenRockHold))
+					if (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					ElseIf (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					;ElseIF (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				Else
+					if (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					;ElseIf (lakeviewManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(lakeviewManorLocation)
+					ElseIf (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					;ElseIf (windstadManorCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(windstadManorLocation)
+					;ElseIf (heljarchenHallCell.GetFactionOwner() == playerFaction)
+						;RespawnToLocation(heljarchenHallLocation)
+					ElseIf (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					ElseIf (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					ElseIf (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					ElseIf (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				EndIf
+			Else ; Nearest hold + nearest home
+				if (player.IsInLocation(EastmarchHold))
+					if (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadWindhelm)
+					EndIf
+				ElseIf (player.IsInLocation(FalkreathHold))
+					if  (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadFalkreath)
+					EndIf
+				ElseIf (player.IsInLocation(HaafingarHold))
+					if (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadSolitude)
+					EndIf
+				ElseIf (player.IsInLocation(HjallmarchHold))
+					if (proudspireManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(proudspireManorLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadSolitude)
+					EndIf
+				ElseIf (player.IsInLocation(PaleHold))
+					if (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadWindhelm)
+					EndIf
+				ElseIf (player.IsInLocation(ReachHold))
+					if (vlindrelHallCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(vlindrelHallLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadMarkarth)
+					EndIf
+				ElseIf (player.IsInLocation(WinterholdHold))
+					if (hjerimCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(hjerimLocation)
+					Else
+						RespawnToLocation(hallsOfTheDeadWindhelm)
+					EndIf
+				ElseIf (player.IsInLocation(RiftHold))
+					if (honeysideCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(honeysideLocation)
+					Else
+						RespawnToLocation(hallsfOfTheDeadRiften)
+					EndIf
+				ElseIf (player.IsInLocation(RavenRockHold))
+					if (severinManorCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(severinManorLocation)
+					Else
+						RespawnToLocation(ravenRock)
+					EndIf
+				Else
+					if (breezehomeCell.GetFactionOwner() == playerFaction)
+						RespawnToLocation(breezehomeLocation)
+					Else
+						RespawnToLocation(altarTempleOfKynareth)
+					EndIf
+				EndIf
+			EndIf
+		ElseIf (mcmOptions._nearestHold == true)
+			if (player.IsInLocation(EastmarchHold) || player.IsInLocation(PaleHold) || player.IsInLocation(WinterholdHold))
+				RespawnToLocation(hallsOfTheDeadWindhelm)
+			ElseIf (player.IsInLocation(FalkreathHold))
+				RespawnToLocation(hallsOfTheDeadFalkreath)
+			ElseIf (player.IsInLocation(HaafingarHold) || player.IsInLocation(HjallmarchHold))
+				RespawnToLocation(hallsOfTheDeadSolitude)
+			ElseIf (player.IsInLocation(ReachHold))
+				RespawnToLocation(hallsOfTheDeadMarkarth)
+			ElseIf (player.IsInLocation(RiftHold))
+				RespawnToLocation(hallsfOfTheDeadRiften)
+			ElseIf (player.IsInLocation(RavenRockHold))
+				RespawnToLocation(ravenRock)
+			Else
+				RespawnToLocation(altarTempleOfKynareth)
+			EndIf   
+		Else
+			Debug.MessageBox("Something went wrong")
+		EndIf
+	Else
+		RespawnToLocation(sovangardeRespawn)
+	EndIf
+EndFunction
+
+
 Function RespawnToLocation(ObjectReference objectLocation)
-    Game.ForceThirdperson()
+    ;Game.ForceThirdperson()
     player.GetActorBase().SetInvulnerable(true)
     Game.EnableFastTravel()
     ; player.SetNoBleedoutRecovery(false)  - - moved below
@@ -603,19 +620,18 @@ Function RespawnToLocation(ObjectReference objectLocation)
 	player.RestoreActorValue("stamina", 1000000)
 	player.RestoreActorValue("magicka", 1000000)
     Game.ForceThirdperson()
+	;ConsoleUtil.PrintMessage("about to fast travel")
     Game.FastTravel(objectLocation)
     player.MoveTo(objectLocation)
+	;ConsoleUtil.PrintMessage("about to re-enable bleedout recovery")
 	player.SetNoBleedoutRecovery(false)
     player.GetActorBase().SetInvulnerable(false)
 	player.DispelAllSpells()
 	AddInventoryEventFilter(gold)
     objectLocation.PushActorAway(player, 1.5)
     MfgConsoleFunc.ResetPhonemeModifier(player)
+	;ConsoleUtil.PrintMessage("about to re-enable player controls")
     Game.EnablePlayerControls()
-    if lastEnemy
-		lastEnemy.StopCombat()
-	endif
-    player.StopCombatAlarm()
     ;savedObject = objectLocation
     ;RegisterForUpdate(0.25)
 EndFunction
@@ -927,11 +943,12 @@ Function ResetEnemiesInCell()
 			;debug.notification("ResetNPCs: follower - ignore: " + npc)
 			; ?or if npc.GetRelationshipRank(player) > 0
 			npc.ResetHealthAndLimbs()
-		Elseif (IsBoss(npc) || (npc.GetBaseObject() as ActorBase).IsUnique())
+		Elseif (IsBoss(npc) || (npc.GetActorBase()).IsUnique())
 			; only reset bosses and "unique" npcs if they are still alive
 			if (!(npc.IsDead()))
-				if noResetBosses.HasForm(npc) 
-					; Boss is blacklisted - do not reset, just heal
+				if BlacklistedForReset(npc) 
+					; Boss is blacklisted - do not reset or relocate, just heal
+					debug.notification("Boss NPC '" + npc.GetDisplayName() + "' is on 'no reset' blacklist.")
 					npc.ResetHealthAndLimbs()
 				elseif !(mcmOptions._resetBosses) 
 					npc.ResetHealthAndLimbs()
@@ -944,7 +961,13 @@ Function ResetEnemiesInCell()
 			else
 				;debug.notification("ResetNPCs: dead boss - ignore: " + npc)
 			endif
-		Else
+		Elseif BlacklistedForReset(npc) 
+			; not a boss, but still blcklisted for reset
+			; don't resurrect if dead, and don't call .Reset or relocate
+			if !(npc.IsDead())
+				npc.ResetHealthAndLimbs()
+			endif
+		else
 			; non-boss NPC
 			;debug.notification("ResetNPCs: non-boss NPC - RESET: " + npc)
 			;npc.Reset()
@@ -979,115 +1002,140 @@ Function ResetEnemy(Actor npc)
 EndFunction
 
 
-Function PopulateBossRaceList()
-	bossRaces.Revert()
-	bossRaces.AddForm(Race.GetRace("DragonRace"))
-	bossRaces.AddForm(Race.GetRace("DragonPriestRace"))
-	bossRaces.AddForm(Race.GetRace("GiantRace"))
-	bossRaces.AddForm(Race.GetRace("MammothRace"))
-	bossRaces.AddForm(Race.GetRace("AlduinRace"))
-	bossRaces.AddForm(Race.GetRace("SkeletonNecroPriestRace"))
-	bossRaces.AddForm(Race.GetRace("UndeadDragonRace"))
-	bossRaces.AddForm(Race.GetRace("DLC1VampireBeastRace"))
-	bossRaces.AddForm(Race.GetRace("DLC1GargoyleVariantBossRace"))
-	bossRaces.AddForm(Race.GetRace("DLC1UndeadDragonRace"))
-	bossRaces.AddForm(Race.GetRace("DLC1LD_ForgemasterRace"))
-	bossRaces.AddForm(Race.GetRace("dlc2SpectralDragonRace"))
-	bossRaces.AddForm(Race.GetRace("DragonBlackRace"))
-	bossRaces.AddForm(Race.GetRace("DLC2DragonBlackRace"))
-	bossRaces.AddForm(Race.GetRace("DLC2AcolyteDragonPriestRace"))
-	bossRaces.AddForm(Race.GetRace("DLC2MiraakRace"))
-EndFunction
+; Function PopulateBossRaceList()
+	; bossRaces.Revert()
+	; bossRaces.AddForm(Race.GetRace("DragonRace"))
+	; bossRaces.AddForm(Race.GetRace("DragonPriestRace"))
+	; bossRaces.AddForm(Race.GetRace("GiantRace"))
+	; bossRaces.AddForm(Race.GetRace("MammothRace"))
+	; bossRaces.AddForm(Race.GetRace("AlduinRace"))
+	; bossRaces.AddForm(Race.GetRace("SkeletonNecroPriestRace"))
+	; bossRaces.AddForm(Race.GetRace("UndeadDragonRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC1VampireBeastRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC1GargoyleVariantBossRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC1UndeadDragonRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC1LD_ForgemasterRace"))
+	; bossRaces.AddForm(Race.GetRace("dlc2SpectralDragonRace"))
+	; bossRaces.AddForm(Race.GetRace("DragonBlackRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC2DragonBlackRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC2AcolyteDragonPriestRace"))
+	; bossRaces.AddForm(Race.GetRace("DLC2MiraakRace"))
+; EndFunction
 
 Function PopulateNamedBossList()
 	namedBosses.Revert()
-	namedBosses.AddForm(Game.GetForm(0x019FE6))		 ; ValsVeran
-	namedBosses.AddForm(Game.GetForm(0x01B07C))		 ; MercerFrey
-	namedBosses.AddForm(Game.GetForm(0x01B0D8))		 ; LvlBanditBossCommonerF
-	namedBosses.AddForm(Game.GetForm(0x01B0DB))		 ; LvlBanditBossCommonerM
-	namedBosses.AddForm(Game.GetForm(0x01B0DC))		 ; LvlBanditBossEvenTonedF
-	namedBosses.AddForm(Game.GetForm(0x01B0DD))		 ; LvlBanditBossEvenTonedM
-	namedBosses.AddForm(Game.GetForm(0x01B0DE))		 ; LvlBanditBossNordF
-	namedBosses.AddForm(Game.GetForm(0x01B0D1))		 ; LvlBanditBossNordM
-	namedBosses.AddForm(Game.GetForm(0x01B0EB))		 ; LvlBanditBossOrcM
-	namedBosses.AddForm(Game.GetForm(0x01BA08))		 ; Telrav
-	namedBosses.AddForm(Game.GetForm(0x01BB28))		 ; JyrikGauldurson
-	namedBosses.AddForm(Game.GetForm(0x01C4E5))		 ; DA03Wizard
-	namedBosses.AddForm(Game.GetForm(0x01C902))		 ; DunLostKnifeBanditBoss
-	namedBosses.AddForm(Game.GetForm(0x01D4B9))		 ; TitusMedeII
-	namedBosses.AddForm(Game.GetForm(0x01D4BA))		 ; TitusMedeIIDecoy
-	namedBosses.AddForm(Game.GetForm(0x01E38B))		 ; dunBrokenOarHargar
-	namedBosses.AddForm(Game.GetForm(0x01E7D7))		 ; Ancano
-	namedBosses.AddForm(Game.GetForm(0x02333A))		 ; dunAnsilvundLuahAlSkaven
-	namedBosses.AddForm(Game.GetForm(0x023AB0))		 ; EncHagraven
-	namedBosses.AddForm(Game.GetForm(0x0240D7))		 ; Drascua
-	namedBosses.AddForm(Game.GetForm(0x026C52))		 ; MS06Potema
-	namedBosses.AddForm(Game.GetForm(0x0284F2))		 ; MS06NecromancerLeader
-	namedBosses.AddForm(Game.GetForm(0x039BB7))		 ; dunHarmugstahlWarlock
-	namedBosses.AddForm(Game.GetForm(0x045F78))		 ; DA13Orchendor
-	namedBosses.AddForm(Game.GetForm(0x046283))		 ; dunHaemarsShame_LvlVampireBoss
-	namedBosses.AddForm(Game.GetForm(0x048B55))		 ; dunForsakenCaveCuralmil
-	namedBosses.AddForm(Game.GetForm(0x04B0AE))		 ; dunDarklightSilvia
-	namedBosses.AddForm(Game.GetForm(0x04D246))		 ; MG03Caller
-	namedBosses.AddForm(Game.GetForm(0x05197F))		 ; dunRannLvlWarlockBoss
-	namedBosses.AddForm(Game.GetForm(0x058303))		 ; EncC06WolfSpirit
-	namedBosses.AddForm(Game.GetForm(0x05B830))		 ; dunBloodletThroneVampireBoss
-	namedBosses.AddForm(Game.GetForm(0x064B1C))		 ; dunHalldirsBoss
-	namedBosses.AddForm(Game.GetForm(0x06CD59))		 ; dunIronBindBossName
-	namedBosses.AddForm(Game.GetForm(0x07D679))		 ; Linwe
-	namedBosses.AddForm(Game.GetForm(0x0834FE))		 ; DA02Champion
-	namedBosses.AddForm(Game.GetForm(0x08BB91))		 ; dunMovarthVampireBoss
-	namedBosses.AddForm(Game.GetForm(0x090739))		 ; dunMistwatchFjola
-	namedBosses.AddForm(Game.GetForm(0x09F360))		; MS09LvllThalmorBoss
-	namedBosses.AddForm(Game.GetForm(0x0A6842))		 ; dunGeirmundSigdis
-	namedBosses.AddForm(Game.GetForm(0x0A9548))		 ; LvlSilverhandBoss
-	namedBosses.AddForm(Game.GetForm(0x0AB6FF))		 ; dunFolgunthur_MikrulGauldurson
-	namedBosses.AddForm(Game.GetForm(0x0B7988))		 ; LvlDraugrBossMale
-	namedBosses.AddForm(Game.GetForm(0x0B7989))		 ; LvlDraugrAmbushBossMale
-	namedBosses.AddForm(Game.GetForm(0x0BC09F))		 ; WEBountyHunterBoss
-	namedBosses.AddForm(Game.GetForm(0x0C0BE5))		 ; DA06GiantBoss
-	namedBosses.AddForm(Game.GetForm(0x0C1908))		 ; dunRebelsCairnLvlDraugrBossRedEagle
-	namedBosses.AddForm(Game.GetForm(0x0CB11B))		 ; dunShimmermistFalmerBoss
-	namedBosses.AddForm(Game.GetForm(0x0CC59B))		 ; dunFortNeugrad_LvlBanditBossAmbush
-	namedBosses.AddForm(Game.GetForm(0x0D37F4))		 ; dunFrostmereCryptPaleLady
-	namedBosses.AddForm(Game.GetForm(0x0D823E))		 ; dunCragslaneButcher
-	namedBosses.AddForm(Game.GetForm(0x0DD9D7))		 ; LvlDraugrBossMaleNoDragonPriest
-	namedBosses.AddForm(Game.GetForm(0x0DD9D9))		 ; LvlDraugrAmbushBossMaleNoDragonPriest
-	namedBosses.AddForm(Game.GetForm(0x0E1642))		 ; dunWhiteRiverWatchBanditLeaderName
-	namedBosses.AddForm(Game.GetForm(0x0E1F81))		 ; dunWhiteRiverWatchLvlBanditBoss
-	namedBosses.AddForm(Game.GetForm(0x0E5F37))		 ; dunDaintySload_LvlSailorCaptain
-	namedBosses.AddForm(Game.GetForm(0x0E76C9))		 ; dunDrelas_LvlWarlockElementalAggro1024
-	namedBosses.AddForm(Game.GetForm(0x0F6087))		 ; CR13FarkasWolfSpirit
-	namedBosses.AddForm(Game.GetForm(0x0F6089))		 ; CR13VilkasWolfSpirit
-	namedBosses.AddForm(Game.GetForm(0x0F608C))		 ; PlayerWolfSpirit
-	namedBosses.AddForm(Game.GetForm(0x1019C6))		 ; DunVolunruudBoss
-	namedBosses.AddForm(Game.GetForm(0x10349B))		 ; dunMS06PotemaSkeleton
-	namedBosses.AddForm(Game.GetForm(0x003788))		 ; DLC1AlthadanVyrthur
-	namedBosses.AddForm(Game.GetForm(0x003BA7))		 ; DLC1Harkon
-	namedBosses.AddForm(Game.GetForm(0x013823))		 ; DLC1RuunvaldWarlockBoss
-	namedBosses.AddForm(Game.GetForm(0x019665))		 ; DLC2dunKarstaag
-	namedBosses.AddForm(Game.GetForm(0x01A373))		 ; DLC2dunHaknir
-	namedBosses.AddForm(Game.GetForm(0x017936))		 ; DLC2MiraakMQ01
-	namedBosses.AddForm(Game.GetForm(0x017938))		 ; DLC2MiraakMQ02
-	namedBosses.AddForm(Game.GetForm(0x017F81))		 ; DLC2MiraakMQ04
-	namedBosses.AddForm(Game.GetForm(0x01D77A))		 ; DLC2dunNorthshoreLandingCrabBoss
-	namedBosses.AddForm(Game.GetForm(0x01F998))		 ; DLC2MiraakTest
-	namedBosses.AddForm(Game.GetForm(0x01FB98))		 ; DLC2MiraakMQ06
-	namedBosses.AddForm(Game.GetForm(0x026196))		 ; DLC2dunHorkerIslandEncHorker
-	namedBosses.AddForm(Game.GetForm(0x0285C3))		 ; DLC2EbonyWarrior
+	AddFormFromEditorID(namedBosses, "ValsVeran")
+	;namedBosses.AddForm(Game.GetForm(0x019FE6))		 ; ValsVeran
+	AddFormFromEditorID(namedBosses, "MercerFrey")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerF")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerM")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedF")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedM")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossNordF")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossNordM")
+	AddFormFromEditorID(namedBosses, "LvlBanditBossOrcM")
+	AddFormFromEditorID(namedBosses, "Telrav")
+	AddFormFromEditorID(namedBosses, "JyrikGauldurson")
+	AddFormFromEditorID(namedBosses, "DA03Wizard")
+	AddFormFromEditorID(namedBosses, "DunLostKnifeBanditBoss")
+	AddFormFromEditorID(namedBosses, "TitusMedeII")
+	AddFormFromEditorID(namedBosses, "TitusMedeIIDecoy")
+	AddFormFromEditorID(namedBosses, "dunBrokenOarHargar")
+	AddFormFromEditorID(namedBosses, "Ancano")
+	AddFormFromEditorID(namedBosses, "dunAnsilvundLuahAlSkaven")
+	AddFormFromEditorID(namedBosses, "EncHagraven")
+	AddFormFromEditorID(namedBosses, "Drascua")
+	AddFormFromEditorID(namedBosses, "MS06Potema")
+	AddFormFromEditorID(namedBosses, "MS06NecromancerLeader")
+	AddFormFromEditorID(namedBosses, "dunHarmugstahlWarlock")
+	AddFormFromEditorID(namedBosses, "DA13Orchendor")
+	AddFormFromEditorID(namedBosses, "dunHaemarsShame_LvlVampireBoss")
+	AddFormFromEditorID(namedBosses, "dunForsakenCaveCuralmil")
+	AddFormFromEditorID(namedBosses, "dunDarklightSilvia")
+	AddFormFromEditorID(namedBosses, "MG03Caller")
+	AddFormFromEditorID(namedBosses, "dunRannLvlWarlockBoss")
+	AddFormFromEditorID(namedBosses, "EncC06WolfSpirit")
+	AddFormFromEditorID(namedBosses, "dunBloodletThroneVampireBoss")
+	AddFormFromEditorID(namedBosses, "dunHalldirsBoss")
+	AddFormFromEditorID(namedBosses, "dunIronBindBossName")
+	AddFormFromEditorID(namedBosses, "Linwe")
+	AddFormFromEditorID(namedBosses, "DA02Champion")
+	AddFormFromEditorID(namedBosses, "dunMovarthVampireBoss")
+	AddFormFromEditorID(namedBosses, "dunMistwatchFjola")
+	AddFormFromEditorID(namedBosses, "MS09LvllThalmorBoss")
+	AddFormFromEditorID(namedBosses, "dunGeirmundSigdis")
+	AddFormFromEditorID(namedBosses, "LvlSilverhandBoss")
+	AddFormFromEditorID(namedBosses, "dunFolgunthur_MikrulGauldurson")
+	AddFormFromEditorID(namedBosses, "LvlDraugrBossMale")
+	AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMale")
+	AddFormFromEditorID(namedBosses, "WEBountyHunterBoss")
+	AddFormFromEditorID(namedBosses, "DA06GiantBoss")
+	AddFormFromEditorID(namedBosses, "dunRebelsCairnLvlDraugrBossRedEagle")
+	AddFormFromEditorID(namedBosses, "dunShimmermistFalmerBoss")
+	AddFormFromEditorID(namedBosses, "dunFortNeugrad_LvlBanditBossAmbush")
+	AddFormFromEditorID(namedBosses, "dunFrostmereCryptPaleLady")
+	AddFormFromEditorID(namedBosses, "dunCragslaneButcher")
+	AddFormFromEditorID(namedBosses, "LvlDraugrBossMaleNoDragonPriest")
+	AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMaleNoDragonPriest")
+	AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchBanditLeaderName")
+	AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchLvlBanditBoss")
+	AddFormFromEditorID(namedBosses, "dunDaintySload_LvlSailorCaptain")
+	AddFormFromEditorID(namedBosses, "dunDrelas_LvlWarlockElementalAggro1024")
+	AddFormFromEditorID(namedBosses, "CR13FarkasWolfSpirit")
+	AddFormFromEditorID(namedBosses, "CR13VilkasWolfSpirit")
+	AddFormFromEditorID(namedBosses, "PlayerWolfSpirit")
+	AddFormFromEditorID(namedBosses, "DunVolunruudBoss")
+	AddFormFromEditorID(namedBosses, "dunMS06PotemaSkeleton")
+	AddFormFromEditorID(namedBosses, "DLC1AlthadanVyrthur")
+	AddFormFromEditorID(namedBosses, "DLC1Harkon")
+	AddFormFromEditorID(namedBosses, "DLC1RuunvaldWarlockBoss")
+	AddFormFromEditorID(namedBosses, "DLC2dunKarstaag")
+	AddFormFromEditorID(namedBosses, "DLC2dunHaknir")
+	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ01")
+	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ02")
+	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ04")
+	AddFormFromEditorID(namedBosses, "DLC2dunNorthshoreLandingCrabBoss")
+	AddFormFromEditorID(namedBosses, "DLC2MiraakTest")
+	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ06")
+	AddFormFromEditorID(namedBosses, "DLC2dunHorkerIslandEncHorker")
+	AddFormFromEditorID(namedBosses, "DLC2EbonyWarrior")
 EndFunction
 
 
-Function PopulateNoResetBossList()
-	noResetBosses.Revert()
-	noResetBosses.AddForm(Game.GetForm(0x0C14B3))		; dunRebelsCairnLvlDraugrBossRedEagle 
-	noResetBosses.AddForm(Game.GetForm(0x0A02FE))		; northwatch interrogator (Northwatch Keep)
+bool Function BlacklistedForReset (Actor npc)
+	return noResetNPCs.HasForm(npc.GetActorBase()) 
+EndFunction
+
+
+Function PopulateNoResetNPCList()
+	noResetNPCs.Revert()
+	;noResetNPCs.AddForm(0x0C14B3)		; dunRebelsCairnLvlDraugrBossRedEagle 
+	;noResetNPCs.AddForm(0x0A02FE)		; northwatch interrogator (Northwatch Keep)
+	AddFormFromEditorID(noResetNPCs, "MS09LvllThalmorBoss")	; northwatch interrogator (Northwatch Keep)
+	AddFormFromEditorID(noResetNPCs, "dunRebelsCairnLvlDraugrBossRedEagle")	; Red Eagle
+	if Game.GetModByName("Vigilant.esm") != 255
+		AddFormFromEditorID(noResetNPCs, "zzzAoMm01Whore")			; Lusine NPC, Bloodsucker quest
+		AddFormFromEditorID(noResetNPCs, "zzzAoMWhore")
+	endif
+EndFunction
+
+
+; Get editor ID for the given form
+; if it exists, add the form to the given formlist
+; return true if form was found
+bool Function AddFormFromEditorID(FormList flist, string eid)
+	Form gotform = PO3_SKSEFunctions.GetFormFromEditorID(eid)
+	if gotform
+		flist.AddForm(gotform)
+	endif
+	;consoleutil.printmessage("editor ID '" +eid+ "' -> " + gotform.GetFormID() + ", formlist length now = " + flist.GetSize())
+	return (gotform != none)
 EndFunction
 
 
 Function PopulateNoResetLocationList()
 	noResetLocations.Revert()
-	;noResetLocations.AddForm(Game.GetForm(0x0A828B))		; Rebel's Cairn
+	;AddFormFromEditorID(noResetLocations, "RebelsCairn01")
 EndFunction
 
 
@@ -1208,3 +1256,14 @@ Function PlaceCampfireMapMarker(bool playerBuilt = false)
 		endif
 	endif
 EndFunction
+
+
+; Function DumpFormListToConsole ()
+	; int x = noResetNPCs.GetSize()
+	; consoleutil.printmessage("dumping noResetNPCs:")
+	; while x > 0
+		; x -= 1
+		; consoleutil.printmessage("noResetNPCs[" +x+ "]: " + noResetNPCs.GetAt(x).GetFormID() + "  " + PO3_SKSEFunctions.GetFormEditorID(noResetNPCs.GetAt(x)))
+	; endwhile
+; EndFunction
+
