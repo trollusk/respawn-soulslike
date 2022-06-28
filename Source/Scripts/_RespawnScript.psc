@@ -65,28 +65,26 @@ bool f5Pressed
 Faction property playerFaction auto
 
 ;Areas that break quests or become inaccessible
-Location property HalldirsCairn auto				; 0x019192
-Location property DimhallowCavern auto
-Location property ShroudhearthBarrow auto
-Location property SerpentsBluff auto
-Location property ThalmorEmbassy auto
-Location property Kolbjorn auto
-Location property Gyldenhul auto
-Location property AncestorGlave auto
-Location property Skuldalfyn auto
-Location property Folgunthr auto
-Location property Volskygge auto
-Location property EastEmpireCompany auto
-Location property AbandonedHouse auto
-Location property AzurasStarInterior auto
-Location property DeadMensRespite auto
+; Location property HalldirsCairn auto				; 0x019192
+; Location property DimhallowCavern auto
+; Location property ShroudhearthBarrow auto
+; Location property SerpentsBluff auto
+; Location property ThalmorEmbassy auto
+; Location property Kolbjorn auto
+; Location property Gyldenhul auto
+; Location property AncestorGlave auto
+; Location property Skuldalfyn auto
+; Location property Folgunthr auto
+; Location property Volskygge auto
+; Location property EastEmpireCompany auto
+; Location property AbandonedHouse auto
+; Location property AzurasStarInterior auto
+; Location property DeadMensRespite auto
 
 ; Werewolf/werebear/vampire
 Race property werewolfRace auto
 Race property werebearRace auto
 Race property vampireRace auto
-
-Location[] disabledLocations ; Set these locations for quest areas that might bug out.
 
 ObjectReference Property PlayerRespawnMarker  Auto  
 Cell Property PlayerRespawnMarkerCell  Auto  
@@ -94,10 +92,14 @@ LocationRefType property locRefTypeBoss auto
 LocationRefType property locRefTypeDLC2Boss1 auto
 
 ; FormLists must exist in the esp!
-FormList property bossRaces auto
-FormList property namedBosses auto
-FormList property noResetNPCs auto
-FormList property noResetLocations auto
+FormList property bossRaces auto					; NPCs are automatically bosses if they belong to these races
+FormList property namedBosses auto					; "Boss" NPCs that aren't detectable as "bosses" by usual means, so we must 
+													; add them manually
+FormList property noResetNPCs auto					; NPCs that should never be reset.
+FormList property noResetLocations auto				; Locations where we should not reset NPCs.
+FormList property noPlayerRespawnLocations auto		; Set these locations for quest areas that might bug out.
+FormList property warnedLocations auto				; No-Respawn Locations we have warned the player about.
+
 bool Property playerRespawnMarkerInitialized auto
 
 ; Furniture property _RBCModFire1 auto
@@ -119,6 +121,8 @@ ObjectReference property playerBuiltCampfireMarker auto
 VisualEffect property deathScreen auto
 ObjectReference property deathLocationMarker  auto  
 
+Message property noRespawnWarningMessage auto
+
 
 Event OnInit()
     player = Game.GetPlayer()
@@ -126,10 +130,10 @@ Event OnInit()
     player.GetActorBase().SetEssential()
     player.SetNoBleedoutRecovery(false)
 
-	;PopulateBossRaceList()
 	PopulateNamedBossList()
 	PopulateNoResetNPCList()
 	PopulateNoResetLocationList()
+	PopulateNoRespawnLocationList()
 	
     RegisterForSleep()
 	AddInventoryEventFilter(gold)
@@ -141,10 +145,10 @@ Event OnPlayerLoadGame()
     player.GetActorBase().SetEssential()
     player.SetNoBleedoutRecovery(false)
 	
-	;PopulateBossRaceList()
 	PopulateNamedBossList()
 	PopulateNoResetNPCList()
 	PopulateNoResetLocationList()
+	PopulateNoRespawnLocationList()
 	
 	if (PlayerRespawnMarker.GetParentCell() == PlayerRespawnMarkerCell)
 		;debug.notification("PlayerRespawnMarker not initialized, moving to player...")
@@ -199,6 +203,8 @@ EndEvent
 
 
 Event OnEnterBleedout()
+	Location loc = player.GetCurrentLocation()
+	
     player.SetNoBleedoutRecovery(true)
 	RemoveAllInventoryEventFilters()
 	
@@ -223,11 +229,9 @@ Event OnEnterBleedout()
     EndIf
 
     ; Check for locations that might bug quests out.
-    bool disabledLocationFound = CheckForDisabledLocation()
+    bool disabledLocationFound = CheckForDisabledLocation(loc)
     
     if (IsTransformed() == false && disabledLocationFound == false && (mcmOptions._onlyTemple || mcmOptions._nearestHold || mcmOptions._nearestHome || mcmOptions._lastBed))
-        Location loc = player.GetCurrentLocation()
-		
 		if lastEnemy
 			lastEnemy.StopCombat()
 		endif
@@ -825,40 +829,13 @@ Event OnHit(ObjectReference akAggressor, Form akSource, Projectile akProjectile,
     lastEnemy = akAggressor as Actor
 EndEvent
 
-Bool Function CheckForDisabledLocation()
-    if (player.IsInLocation(HalldirsCairn))
-        return true
-    ElseIf (player.IsInLocation(DimhallowCavern))
-        return true
-    ElseIf (player.IsInLocation(ShroudhearthBarrow))
-        return true
-    ElseIf (player.IsInLocation(SerpentsBluff))
-        return true
-    ElseIf (player.IsInLocation(ThalmorEmbassy))
-        return true
-    ElseIf (player.IsInLocation(Kolbjorn))
-        return true
-    ElseIf (player.IsInLocation(Gyldenhul))
-        return true
-    ElseIf (player.IsInLocation(AncestorGlave))
-        return true
-    ElseIf (player.IsInLocation(Skuldalfyn))
-        return true
-    ElseIf (player.IsInLocation(Folgunthr))
-        return true
-    ElseIf (player.IsInLocation(Volskygge))
-        return true
-    ElseIf (player.IsInLocation(EastEmpireCompany))
-        return true
-    ElseIf (player.IsInLocation(AbandonedHouse))
-        return true
-    ElseIf (player.IsInLocation(AzurasStarInterior))
-        return true
-    ElseIf (player.IsInLocation(DeadMensRespite))
-        return true
-    EndIf
-    return false
+
+
+Bool Function CheckForDisabledLocation(Location loc)
+	return noPlayerRespawnLocations.HasForm(loc)
 EndFunction
+
+
 
 Bool Function IsTransformed()
     if (player.GetRace() == werebearRace || player.GetRace() == werewolfRace || player.GetRace() == vampireRace)
@@ -1139,6 +1116,26 @@ Function PopulateNoResetLocationList()
 EndFunction
 
 
+Function PopulateNoRespawnLocationList ()
+	noPlayerRespawnLocations.Revert()
+	AddFormFromEditorID(noPlayerRespawnLocations, "HalldirsCairnLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "DLC1DimhollowCryptLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "ShroudHearthBarrowLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "SerpentsBluffRedoubtLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "ThalmorEmbassyLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "DLC2KolbjornBarrowLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "DLC2GyldenhulBarrowLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "DLC1_AncestorsGladeLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "SkuldalfnLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "FolgunthurLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "VolskyggeLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "EastEmpireWarehouseLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "MarkarthAbandonedHouse")
+	AddFormFromEditorID(noPlayerRespawnLocations, "AzurasStarInteriorLocation")
+	AddFormFromEditorID(noPlayerRespawnLocations, "DeadMensRespiteLocation")
+EndFunction
+
+
 ; XXX return true if the given actor is a 'boss' and therefore should not respawn if dead.
 Bool Function IsBoss(Actor npc)
     ; blacklist TODO
@@ -1266,4 +1263,14 @@ EndFunction
 		; consoleutil.printmessage("noResetNPCs[" +x+ "]: " + noResetNPCs.GetAt(x).GetFormID() + "  " + PO3_SKSEFunctions.GetFormEditorID(noResetNPCs.GetAt(x)))
 	; endwhile
 ; EndFunction
+
+
+Event OnLocationChange (Location oldloc, Location newloc)
+	if CheckForDisabledLocation(newloc)
+		if !(warnedLocations.HasForm(newloc))
+			warnedLocations.AddForm(newloc)
+			noRespawnWarningMessage.show()
+		endif
+	endif
+EndEvent
 

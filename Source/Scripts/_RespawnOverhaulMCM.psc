@@ -210,6 +210,13 @@ Event OnConfigInit()
 EndEvent
 
 Event OnPageReset(string page)
+	; if(page == "")
+		; LoadCustomContent("respawn/title.dds", 50, 50)
+		; return
+	; endif
+	
+	; UnloadCustomContent()
+	
 	If (page == "Respawn Locations")
 		Cell markerCell = PlayerRespawnMarker.GetParentCell()
 		SetCursorFillMode(TOP_TO_BOTTOM)
