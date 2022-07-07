@@ -225,10 +225,10 @@ Event OnPageReset(string page)
 		iOnlyTemple = AddToggleOption("Only Temple of Kynareth", onlyTemple)
 		iNearestHold = AddToggleOption("Nearest hold", nearestHold)
 		iNearestHome = AddToggleOption("Nearest home", nearestHome)
+		iLastBed = AddToggleOption("Last Bed or campfire (" + markerCell.GetName() + ")", lastBed)
+		AddEmptyOption()
 		iRespawnDelay = AddSliderOption("Respawn delay (s)", respawnDelay)
 		
-		iLastBed = AddToggleOption("Last Bed or campfire (" + markerCell.GetName() + ")", lastBed)
-
 		;AddHeaderOption("Push key")
 		;iPushKey = AddKeyMapOption("Push key", pushKey)
 	ElseIf (page == ("Inventory Penalties"))

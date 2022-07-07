@@ -122,6 +122,7 @@ VisualEffect property deathScreen auto
 ObjectReference property deathLocationMarker  auto  
 
 Message property noRespawnWarningMessage auto
+string JSONSettingsFile = "../Respawn/Respawn.json"				; data/SKSE/plugins/Respawn/Respawn.json
 
 
 Event OnInit()
@@ -257,6 +258,8 @@ Event OnEnterBleedout()
         RemoveGear()
         RemoveInventory()
 		
+		player.StopCombatAlarm()
+		
 		if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == none
 			; delete the grave if it's empty
 			if graveContainer.GetNumItems() < 1
@@ -281,6 +284,7 @@ Event OnEnterBleedout()
 			if (!loc || !(loc.IsCleared()))
 				;ConsoleUtil.PrintMessage("about to reset enemies")
 				ResetEnemiesInCell()
+				player.StopCombatAlarm()
 			endif
         endif
 		
@@ -1001,81 +1005,89 @@ EndFunction
 
 Function PopulateNamedBossList()
 	namedBosses.Revert()
-	AddFormFromEditorID(namedBosses, "ValsVeran")
-	;namedBosses.AddForm(Game.GetForm(0x019FE6))		 ; ValsVeran
-	AddFormFromEditorID(namedBosses, "MercerFrey")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerF")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerM")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedF")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedM")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossNordF")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossNordM")
-	AddFormFromEditorID(namedBosses, "LvlBanditBossOrcM")
-	AddFormFromEditorID(namedBosses, "Telrav")
-	AddFormFromEditorID(namedBosses, "JyrikGauldurson")
-	AddFormFromEditorID(namedBosses, "DA03Wizard")
-	AddFormFromEditorID(namedBosses, "DunLostKnifeBanditBoss")
-	AddFormFromEditorID(namedBosses, "TitusMedeII")
-	AddFormFromEditorID(namedBosses, "TitusMedeIIDecoy")
-	AddFormFromEditorID(namedBosses, "dunBrokenOarHargar")
-	AddFormFromEditorID(namedBosses, "Ancano")
-	AddFormFromEditorID(namedBosses, "dunAnsilvundLuahAlSkaven")
-	AddFormFromEditorID(namedBosses, "EncHagraven")
-	AddFormFromEditorID(namedBosses, "Drascua")
-	AddFormFromEditorID(namedBosses, "MS06Potema")
-	AddFormFromEditorID(namedBosses, "MS06NecromancerLeader")
-	AddFormFromEditorID(namedBosses, "dunHarmugstahlWarlock")
-	AddFormFromEditorID(namedBosses, "DA13Orchendor")
-	AddFormFromEditorID(namedBosses, "dunHaemarsShame_LvlVampireBoss")
-	AddFormFromEditorID(namedBosses, "dunForsakenCaveCuralmil")
-	AddFormFromEditorID(namedBosses, "dunDarklightSilvia")
-	AddFormFromEditorID(namedBosses, "MG03Caller")
-	AddFormFromEditorID(namedBosses, "dunRannLvlWarlockBoss")
-	AddFormFromEditorID(namedBosses, "EncC06WolfSpirit")
-	AddFormFromEditorID(namedBosses, "dunBloodletThroneVampireBoss")
-	AddFormFromEditorID(namedBosses, "dunHalldirsBoss")
-	AddFormFromEditorID(namedBosses, "dunIronBindBossName")
-	AddFormFromEditorID(namedBosses, "Linwe")
-	AddFormFromEditorID(namedBosses, "DA02Champion")
-	AddFormFromEditorID(namedBosses, "dunMovarthVampireBoss")
-	AddFormFromEditorID(namedBosses, "dunMistwatchFjola")
-	AddFormFromEditorID(namedBosses, "MS09LvllThalmorBoss")
-	AddFormFromEditorID(namedBosses, "dunGeirmundSigdis")
-	AddFormFromEditorID(namedBosses, "LvlSilverhandBoss")
-	AddFormFromEditorID(namedBosses, "dunFolgunthur_MikrulGauldurson")
-	AddFormFromEditorID(namedBosses, "LvlDraugrBossMale")
-	AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMale")
-	AddFormFromEditorID(namedBosses, "WEBountyHunterBoss")
-	AddFormFromEditorID(namedBosses, "DA06GiantBoss")
-	AddFormFromEditorID(namedBosses, "dunRebelsCairnLvlDraugrBossRedEagle")
-	AddFormFromEditorID(namedBosses, "dunShimmermistFalmerBoss")
-	AddFormFromEditorID(namedBosses, "dunFortNeugrad_LvlBanditBossAmbush")
-	AddFormFromEditorID(namedBosses, "dunFrostmereCryptPaleLady")
-	AddFormFromEditorID(namedBosses, "dunCragslaneButcher")
-	AddFormFromEditorID(namedBosses, "LvlDraugrBossMaleNoDragonPriest")
-	AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMaleNoDragonPriest")
-	AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchBanditLeaderName")
-	AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchLvlBanditBoss")
-	AddFormFromEditorID(namedBosses, "dunDaintySload_LvlSailorCaptain")
-	AddFormFromEditorID(namedBosses, "dunDrelas_LvlWarlockElementalAggro1024")
-	AddFormFromEditorID(namedBosses, "CR13FarkasWolfSpirit")
-	AddFormFromEditorID(namedBosses, "CR13VilkasWolfSpirit")
-	AddFormFromEditorID(namedBosses, "PlayerWolfSpirit")
-	AddFormFromEditorID(namedBosses, "DunVolunruudBoss")
-	AddFormFromEditorID(namedBosses, "dunMS06PotemaSkeleton")
-	AddFormFromEditorID(namedBosses, "DLC1AlthadanVyrthur")
-	AddFormFromEditorID(namedBosses, "DLC1Harkon")
-	AddFormFromEditorID(namedBosses, "DLC1RuunvaldWarlockBoss")
-	AddFormFromEditorID(namedBosses, "DLC2dunKarstaag")
-	AddFormFromEditorID(namedBosses, "DLC2dunHaknir")
-	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ01")
-	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ02")
-	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ04")
-	AddFormFromEditorID(namedBosses, "DLC2dunNorthshoreLandingCrabBoss")
-	AddFormFromEditorID(namedBosses, "DLC2MiraakTest")
-	AddFormFromEditorID(namedBosses, "DLC2MiraakMQ06")
-	AddFormFromEditorID(namedBosses, "DLC2dunHorkerIslandEncHorker")
-	AddFormFromEditorID(namedBosses, "DLC2EbonyWarrior")
+	string[] bosses = JsonUtil.StringListToArray(JSONSettingsFile, "namedbosses")
+	int index = 0
+	consoleutil.printmessage("NamedBosses has length " + bosses.Length)
+	while index < bosses.Length
+		consoleutil.printmessage("Entry " +index+ ": '" + bosses[index] + "'")
+		AddFormFromEditorID(namedBosses, bosses[index])
+		index += 1
+	endwhile
+	; AddFormFromEditorID(namedBosses, "ValsVeran")
+	; ;namedBosses.AddForm(Game.GetForm(0x019FE6))		 ; ValsVeran
+	; AddFormFromEditorID(namedBosses, "MercerFrey")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerF")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossCommonerM")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedF")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossEvenTonedM")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossNordF")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossNordM")
+	; AddFormFromEditorID(namedBosses, "LvlBanditBossOrcM")
+	; AddFormFromEditorID(namedBosses, "Telrav")
+	; AddFormFromEditorID(namedBosses, "JyrikGauldurson")
+	; AddFormFromEditorID(namedBosses, "DA03Wizard")
+	; AddFormFromEditorID(namedBosses, "DunLostKnifeBanditBoss")
+	; AddFormFromEditorID(namedBosses, "TitusMedeII")
+	; AddFormFromEditorID(namedBosses, "TitusMedeIIDecoy")
+	; AddFormFromEditorID(namedBosses, "dunBrokenOarHargar")
+	; AddFormFromEditorID(namedBosses, "Ancano")
+	; AddFormFromEditorID(namedBosses, "dunAnsilvundLuahAlSkaven")
+	; AddFormFromEditorID(namedBosses, "EncHagraven")
+	; AddFormFromEditorID(namedBosses, "Drascua")
+	; AddFormFromEditorID(namedBosses, "MS06Potema")
+	; AddFormFromEditorID(namedBosses, "MS06NecromancerLeader")
+	; AddFormFromEditorID(namedBosses, "dunHarmugstahlWarlock")
+	; AddFormFromEditorID(namedBosses, "DA13Orchendor")
+	; AddFormFromEditorID(namedBosses, "dunHaemarsShame_LvlVampireBoss")
+	; AddFormFromEditorID(namedBosses, "dunForsakenCaveCuralmil")
+	; AddFormFromEditorID(namedBosses, "dunDarklightSilvia")
+	; AddFormFromEditorID(namedBosses, "MG03Caller")
+	; AddFormFromEditorID(namedBosses, "dunRannLvlWarlockBoss")
+	; AddFormFromEditorID(namedBosses, "EncC06WolfSpirit")
+	; AddFormFromEditorID(namedBosses, "dunBloodletThroneVampireBoss")
+	; AddFormFromEditorID(namedBosses, "dunHalldirsBoss")
+	; AddFormFromEditorID(namedBosses, "dunIronBindBossName")
+	; AddFormFromEditorID(namedBosses, "Linwe")
+	; AddFormFromEditorID(namedBosses, "DA02Champion")
+	; AddFormFromEditorID(namedBosses, "dunMovarthVampireBoss")
+	; AddFormFromEditorID(namedBosses, "dunMistwatchFjola")
+	; AddFormFromEditorID(namedBosses, "MS09LvllThalmorBoss")
+	; AddFormFromEditorID(namedBosses, "dunGeirmundSigdis")
+	; AddFormFromEditorID(namedBosses, "LvlSilverhandBoss")
+	; AddFormFromEditorID(namedBosses, "dunFolgunthur_MikrulGauldurson")
+	; AddFormFromEditorID(namedBosses, "LvlDraugrBossMale")
+	; AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMale")
+	; AddFormFromEditorID(namedBosses, "WEBountyHunterBoss")
+	; AddFormFromEditorID(namedBosses, "DA06GiantBoss")
+	; AddFormFromEditorID(namedBosses, "dunRebelsCairnLvlDraugrBossRedEagle")
+	; AddFormFromEditorID(namedBosses, "dunShimmermistFalmerBoss")
+	; AddFormFromEditorID(namedBosses, "dunFortNeugrad_LvlBanditBossAmbush")
+	; AddFormFromEditorID(namedBosses, "dunFrostmereCryptPaleLady")
+	; AddFormFromEditorID(namedBosses, "dunCragslaneButcher")
+	; AddFormFromEditorID(namedBosses, "LvlDraugrBossMaleNoDragonPriest")
+	; AddFormFromEditorID(namedBosses, "LvlDraugrAmbushBossMaleNoDragonPriest")
+	; AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchBanditLeaderName")
+	; AddFormFromEditorID(namedBosses, "dunWhiteRiverWatchLvlBanditBoss")
+	; AddFormFromEditorID(namedBosses, "dunDaintySload_LvlSailorCaptain")
+	; AddFormFromEditorID(namedBosses, "dunDrelas_LvlWarlockElementalAggro1024")
+	; AddFormFromEditorID(namedBosses, "CR13FarkasWolfSpirit")
+	; AddFormFromEditorID(namedBosses, "CR13VilkasWolfSpirit")
+	; AddFormFromEditorID(namedBosses, "PlayerWolfSpirit")
+	; AddFormFromEditorID(namedBosses, "DunVolunruudBoss")
+	; AddFormFromEditorID(namedBosses, "dunMS06PotemaSkeleton")
+	; AddFormFromEditorID(namedBosses, "DLC1AlthadanVyrthur")
+	; AddFormFromEditorID(namedBosses, "DLC1Harkon")
+	; AddFormFromEditorID(namedBosses, "DLC1RuunvaldWarlockBoss")
+	; AddFormFromEditorID(namedBosses, "DLC2dunKarstaag")
+	; AddFormFromEditorID(namedBosses, "DLC2dunHaknir")
+	; AddFormFromEditorID(namedBosses, "DLC2MiraakMQ01")
+	; AddFormFromEditorID(namedBosses, "DLC2MiraakMQ02")
+	; AddFormFromEditorID(namedBosses, "DLC2MiraakMQ04")
+	; AddFormFromEditorID(namedBosses, "DLC2dunNorthshoreLandingCrabBoss")
+	; AddFormFromEditorID(namedBosses, "DLC2MiraakTest")
+	; AddFormFromEditorID(namedBosses, "DLC2MiraakMQ06")
+	; AddFormFromEditorID(namedBosses, "DLC2dunHorkerIslandEncHorker")
+	; AddFormFromEditorID(namedBosses, "DLC2EbonyWarrior")
 EndFunction
 
 
@@ -1086,14 +1098,29 @@ EndFunction
 
 Function PopulateNoResetNPCList()
 	noResetNPCs.Revert()
+	string[] noreset = JsonUtil.StringListToArray(JSONSettingsFile, "noresetnpcs")
+	int index = 0
+	consoleutil.printmessage("NoResetNPCs has length " + noreset.Length)
+	while index < noreset.Length
+		consoleutil.printmessage("Entry " +index+ ": '" + noreset[index] + "'")
+		AddFormFromEditorID(noResetNPCs, noreset[index])
+		index += 1
+	endwhile
+	
 	;noResetNPCs.AddForm(0x0C14B3)		; dunRebelsCairnLvlDraugrBossRedEagle 
 	;noResetNPCs.AddForm(0x0A02FE)		; northwatch interrogator (Northwatch Keep)
-	AddFormFromEditorID(noResetNPCs, "MS09LvllThalmorBoss")	; northwatch interrogator (Northwatch Keep)
-	AddFormFromEditorID(noResetNPCs, "dunRebelsCairnLvlDraugrBossRedEagle")	; Red Eagle
-	if Game.GetModByName("Vigilant.esm") != 255
-		AddFormFromEditorID(noResetNPCs, "zzzAoMm01Whore")			; Lusine NPC, Bloodsucker quest
-		AddFormFromEditorID(noResetNPCs, "zzzAoMWhore")
-	endif
+	; AddFormFromEditorID(noResetNPCs, "MS09LvllThalmorBoss")	; northwatch interrogator (Northwatch Keep)
+	; AddFormFromEditorID(noResetNPCs, "dunRebelsCairnLvlDraugrBossRedEagle")	; Red Eagle
+	; if Game.GetModByName("Vigilant.esm") != 255
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMm01Whore")			; Lusine NPC, Bloodsucker quest
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMWhore")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora01")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora02")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora03")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora04")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora05")
+		; AddFormFromEditorID(noResetNPCs, "zzzAoMBossDremora06")
+	; endif	
 EndFunction
 
 
@@ -1118,21 +1145,32 @@ EndFunction
 
 Function PopulateNoRespawnLocationList ()
 	noPlayerRespawnLocations.Revert()
-	AddFormFromEditorID(noPlayerRespawnLocations, "HalldirsCairnLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "DLC1DimhollowCryptLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "ShroudHearthBarrowLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "SerpentsBluffRedoubtLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "ThalmorEmbassyLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "DLC2KolbjornBarrowLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "DLC2GyldenhulBarrowLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "DLC1_AncestorsGladeLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "SkuldalfnLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "FolgunthurLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "VolskyggeLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "EastEmpireWarehouseLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "MarkarthAbandonedHouse")
-	AddFormFromEditorID(noPlayerRespawnLocations, "AzurasStarInteriorLocation")
-	AddFormFromEditorID(noPlayerRespawnLocations, "DeadMensRespiteLocation")
+	string[] locations = JsonUtil.StringListToArray(JSONSettingsFile, "norespawnlocations")
+	int index = 0
+	consoleutil.printmessage("NoRespawnLocations has length " + locations.Length)
+	while index < locations.Length
+		consoleutil.printmessage("Entry " +index+ ": '" + locations[index] + "'")
+		AddFormFromEditorID(noPlayerRespawnLocations, locations[index])
+		index += 1
+	endwhile
+	; AddFormFromEditorID(noPlayerRespawnLocations, "HalldirsCairnLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "DLC1DimhollowCryptLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "ShroudHearthBarrowLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "SerpentsBluffRedoubtLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "ThalmorEmbassyLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "DLC2KolbjornBarrowLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "DLC2GyldenhulBarrowLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "DLC1_AncestorsGladeLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "SkuldalfnLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "FolgunthurLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "VolskyggeLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "EastEmpireWarehouseLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "MarkarthAbandonedHouse")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "AzurasStarInteriorLocation")
+	; AddFormFromEditorID(noPlayerRespawnLocations, "DeadMensRespiteLocation")
+	; if Game.GetModByName("Vigilant.esm") != 255
+		; AddFormFromEditorID(noPlayerRespawnLocations, "zzzAoMLocAltarMolag")
+	; endif
 EndFunction
 
 
