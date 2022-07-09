@@ -51,3 +51,7 @@ Thumbs.db
 meta.ini
 *.pex
 Respawn Soulslike.zip
+skyrimse.ppj
+.vscode/launch.json
+.vscode/tasks.json
+SkyrimSE.code-workspace

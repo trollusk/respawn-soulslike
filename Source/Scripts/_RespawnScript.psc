@@ -12,7 +12,7 @@ Faction property creatureFaction auto
 Armor property defaultArmor auto
 ObjectReference property ashPileObject auto
 Actor property deathMarker auto
-; XXX
+
 ObjectReference property graveContainer auto
 ObjectReference property graveActivator auto
 ObjectReference property graveLight auto
@@ -139,6 +139,9 @@ Event OnInit()
     RegisterForSleep()
 	AddInventoryEventFilter(gold)
 EndEvent
+
+
+; OnPlayerLoadGame events can only be received by player/player aliases
 
 Event OnPlayerLoadGame()
     player = Game.GetPlayer()
@@ -1007,9 +1010,9 @@ Function PopulateNamedBossList()
 	namedBosses.Revert()
 	string[] bosses = JsonUtil.StringListToArray(JSONSettingsFile, "namedbosses")
 	int index = 0
-	consoleutil.printmessage("NamedBosses has length " + bosses.Length)
+	;consoleutil.printmessage("NamedBosses has length " + bosses.Length)
 	while index < bosses.Length
-		consoleutil.printmessage("Entry " +index+ ": '" + bosses[index] + "'")
+		;consoleutil.printmessage("Entry " +index+ ": '" + bosses[index] + "'")
 		AddFormFromEditorID(namedBosses, bosses[index])
 		index += 1
 	endwhile
@@ -1100,9 +1103,9 @@ Function PopulateNoResetNPCList()
 	noResetNPCs.Revert()
 	string[] noreset = JsonUtil.StringListToArray(JSONSettingsFile, "noresetnpcs")
 	int index = 0
-	consoleutil.printmessage("NoResetNPCs has length " + noreset.Length)
+	;consoleutil.printmessage("NoResetNPCs has length " + noreset.Length)
 	while index < noreset.Length
-		consoleutil.printmessage("Entry " +index+ ": '" + noreset[index] + "'")
+		;consoleutil.printmessage("Entry " +index+ ": '" + noreset[index] + "'")
 		AddFormFromEditorID(noResetNPCs, noreset[index])
 		index += 1
 	endwhile
@@ -1147,9 +1150,9 @@ Function PopulateNoRespawnLocationList ()
 	noPlayerRespawnLocations.Revert()
 	string[] locations = JsonUtil.StringListToArray(JSONSettingsFile, "norespawnlocations")
 	int index = 0
-	consoleutil.printmessage("NoRespawnLocations has length " + locations.Length)
+	;consoleutil.printmessage("NoRespawnLocations has length " + locations.Length)
 	while index < locations.Length
-		consoleutil.printmessage("Entry " +index+ ": '" + locations[index] + "'")
+		;consoleutil.printmessage("Entry " +index+ ": '" + locations[index] + "'")
 		AddFormFromEditorID(noPlayerRespawnLocations, locations[index])
 		index += 1
 	endwhile
@@ -1174,19 +1177,18 @@ Function PopulateNoRespawnLocationList ()
 EndFunction
 
 
-; XXX return true if the given actor is a 'boss' and therefore should not respawn if dead.
+; Return true if the given actor is a 'boss' and therefore should not respawn if dead.
 Bool Function IsBoss(Actor npc)
-    ; blacklist TODO
-    ; boss races TODO list of races such as Dragon
-    ;actor.GetRace()
-    ; Registered as a "boss" for this location
     if (npc.HasRefType(locRefTypeBoss))
+	    ; Game has tagged this NPC as a "boss" for this location
 		Return true
     Elseif (npc.HasRefType(locRefTypeDLC2Boss1))
 		Return true
 	Elseif bossRaces.HasForm(npc.GetRace())
+		; NPC belongs to one of the races that are always considered bosses (dragons etc)
 		Return true
 	Elseif namedBosses.HasForm(npc)
+		; NPC is on the list of named bosses
 		Return true
 	Else
 		Return false
