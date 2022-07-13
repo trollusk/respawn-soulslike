@@ -306,6 +306,9 @@ Function TravelToRespawnPoint()
 				; respawn marker is still in the "Elsweyr" default cell
 				debug.notification("No bed or campfire has been set as a respawn point. Respawning to Temple of Kynareth instead.")
 				RespawnToLocation(altarTempleOfKynareth)
+			elseif player.GetDistance(PlayerRespawnMarker) < 300
+                debug.notification("You were killed next to your respawn point. Respawning to Temple of Kynareth instead.")
+				RespawnToLocation(altarTempleOfKynareth)
 			else
 				RespawnToLocation(PlayerRespawnMarker)
 			endif
@@ -704,9 +707,9 @@ Function RemoveInventory()
 	int numItemsInInventory = 0
 	ObjectReference dest
 	
-	; player inventory contains Forms, not ObjectReferences
-	; solution 1: removeitem, playeralias.OnItemRemoved
-	; solution 2: powerof3 papyrus extender player.GetQuestItems()
+    if mcmOptions._inventoryPenalty <= 0
+        return
+    endif
 	
 	if mcmOptions._diabloMode || !player.IsInCombat() || lastEnemy == None
 		; send gear to grave
@@ -719,28 +722,47 @@ Function RemoveInventory()
 		return
 	endif
 
-	while invIndex < player.GetNumItems()
-		numItemsInInventory = player.GetNumItems()
-		Form itemBase = player.GetNthForm(invIndex) 
-		
+    int numToLose = Utility.RandomInt(1, (player.GetNumItems() * mcmOptions._inventoryPenalty / 100.0) as int)
+	int numLost = 0
+    while numLost < numToLose
+        invIndex = Utility.RandomInt(0, player.GetNumItems() - 1)
+        Form itemBase = player.GetNthForm(invIndex)
+  
 		if player.IsEquipped(itemBase) 
 			; do nothing - item is equipped
 		elseif itemBase == gold 
 			; do nothing - item is gold
 		else
 			; not equipped, not gold
-			if Utility.RandomInt(1, 100) < mcmOptions._inventoryPenalty
-				int itemCount = player.GetItemCount(itemBase)
-				int numToLose = Utility.RandomInt(1, itemCount)
-				player.RemoveItem(itemBase, numToLose, true, dest)
-				if player.GetNumItems() < numItemsInInventory
-					; lost a whole item, so do not advance the index
-					invIndex -= 1
-				endif
-			endif
+            ; can't detct quest items until the item is removed from the player,
+            ; since it's only then that we can get its objectreference
+            player.RemoveItem(itemBase, player.GetItemCount(itemBase), true, dest)
 		endif
 		invIndex += 1
-	endWhile
+    endwhile
+
+	; while invIndex < player.GetNumItems()
+	; 	numItemsInInventory = player.GetNumItems()
+	; 	Form itemBase = player.GetNthForm(invIndex) 
+		
+	; 	if player.IsEquipped(itemBase) 
+	; 		; do nothing - item is equipped
+	; 	elseif itemBase == gold 
+	; 		; do nothing - item is gold
+	; 	else
+	; 		; not equipped, not gold
+	; 		if Utility.RandomInt(1, 100) < mcmOptions._inventoryPenalty
+	; 			int itemCount = player.GetItemCount(itemBase)
+	; 			int numToLose = Utility.RandomInt(1, itemCount)
+	; 			player.RemoveItem(itemBase, numToLose, true, dest)
+	; 			if player.GetNumItems() < numItemsInInventory
+	; 				; lost a whole item, so do not advance the index
+	; 				invIndex -= 1
+	; 			endif
+	; 		endif
+	; 	endif
+	; 	invIndex += 1
+	; endWhile
 	
 	; invIndex = itemsToLose.GetSize()
 	; debug.notification("Losing " + invIndex + " items into grave...")
