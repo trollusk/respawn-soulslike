@@ -636,7 +636,7 @@ Function RespawnToLocation(ObjectReference objectLocation)
     Game.ForceThirdperson()
 	;ConsoleUtil.PrintMessage("about to fast travel")
     Game.FastTravel(objectLocation)
-    player.MoveTo(objectLocation)
+    player.MoveTo(objectLocation)       ; does same thing as FastTravel, in case former didnt work
 	;ConsoleUtil.PrintMessage("about to re-enable bleedout recovery")
 	player.SetNoBleedoutRecovery(false)
     player.GetActorBase().SetInvulnerable(false)
@@ -646,6 +646,9 @@ Function RespawnToLocation(ObjectReference objectLocation)
     MfgConsoleFunc.ResetPhonemeModifier(player)
 	;ConsoleUtil.PrintMessage("about to re-enable player controls")
     Game.EnablePlayerControls()
+    if mcmOptions._saveOnRespawn
+        Game.RequestSave()
+    endif
     ;savedObject = objectLocation
     ;RegisterForUpdate(0.25)
 EndFunction
@@ -738,7 +741,7 @@ Function RemoveInventory()
             ; since it's only then that we can get its objectreference
             player.RemoveItem(itemBase, player.GetItemCount(itemBase), true, dest)
 		endif
-		invIndex += 1
+        numLost = numLost + 1
     endwhile
 
 	; while invIndex < player.GetNumItems()
@@ -1222,18 +1225,23 @@ Event OnSleepStart(float afSleepStartTime, float afDesiredSleepEndTime)
 EndEvent
 
 
+bool Function IsQuestItem (ObjectReference itemref)
+    return (itemref.GetNumReferenceAliases() > 0)
+EndFunction
+
 ; count * item removed from "me" (player) and put in dest. itemReference is ignored.
 ; we need to reverse the transfer if item is gold and dest is anything other than "none" or a vendor inventory.
 ; ie if dest is a follower, or a chest etc.
 ; dest.IsInFaction(MerchantFaction) >= 0
 ; dest.IsPlayerTeammate()
 
+
 Event OnItemRemoved(Form itemBase, int count, ObjectReference itemReference, ObjectReference dest)
 	
 	if player.IsBleedingOut() 
 		; We are here because we are moving items from player inventory to grave, during bleedout
 		; We need to check if the item is a quest item, and if so, reverse the move
-		if itemReference.GetNumReferenceAliases() > 0
+		if IsQuestItem(itemReference)
 			debug.Notification("Prevented loss of quest item from player inventory.")
 			dest.RemoveItem(itemBase, count, false, Game.GetPlayer())
 		endif

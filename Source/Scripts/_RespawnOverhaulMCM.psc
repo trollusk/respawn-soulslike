@@ -18,6 +18,7 @@ bool property _resetEnemies auto
 bool property _resetBosses auto
 bool property _preventGoldStorage auto
 bool property _giveDeathMarkerQuest auto
+bool property _saveOnRespawn auto
 
 bool destroyAshpileOnDeath = true
 bool diabloMode = true
@@ -26,6 +27,7 @@ bool resetEnemies = false
 bool resetBosses = false
 bool preventGoldStorage = false
 bool giveDeathMarkerQuest = true
+bool saveOnRespawn = false
 
 bool onlyTemple = false
 bool nearestHold = false
@@ -133,6 +135,7 @@ int iResetBosses
 int iPreventGoldStorage
 int iDestroyAshpileOnDeath
 int iGiveDeathMarkerQuest
+int iSaveOnRespawn
 
 ObjectReference Property PlayerRespawnMarker  Auto  
 LocationRefType property locRefTypeBoss auto
@@ -206,7 +209,7 @@ Event OnConfigInit()
 	_resetBosses = resetBosses
 	_destroyAshpileOnDeath = destroyAshpileOnDeath
 	_giveDeathMarkerQuest = giveDeathMarkerQuest
-	
+	_saveOnRespawn = saveOnRespawn
 EndEvent
 
 Event OnPageReset(string page)
@@ -276,6 +279,7 @@ Event OnPageReset(string page)
 	ElseIf (page == ("Save Settings"))
 		SetCursorFillMode(TOP_TO_BOTTOM)
 		iDisableSaves = AddToggleOption("Disable Quicksaving", disableSaves)
+        iSaveOnRespawn = AddToggleOption("Save after respawn", saveOnRespawn)
 	ElseIf (page == ("Modes"))
 		Actor npc = (Game.GetCurrentCrosshairRef() as Actor)
 		SetCursorFillMode(TOP_TO_BOTTOM)
@@ -391,6 +395,10 @@ Event OnOptionSelect(int option)
 			disableSaves = !disableSaves
 			SetToggleOptionValue(iDisableSaves, disableSaves)
 			_disableSaves = disableSaves
+        elseif option == iSaveOnRespawn
+            saveOnRespawn = !saveOnRespawn
+            SetToggleOptionValue(iSaveOnRespawn, saveOnRespawn)
+            _saveOnRespawn = saveOnRespawn
 		EndIf
 	ElseIf (CurrentPage == "Modes")
 		if (option == iDiabloMode)
@@ -789,7 +797,9 @@ Event OnOptionHighlight(int option)
 		SetInfoText("On death, give the player a quest to retrieve their ashpile.")
 	ElseIf (option == iPreventGoldStorage)
 		SetInfoText("Prevent the player from storing gold in containers, corpses or follower inventories. The only ways to lose gold are by spending it or being defeated.")
-	EndIf
+    elseif option == iSaveOnRespawn
+        SetInfoText("Save the game each time the player respawns.")
+    EndIf
 EndEvent
 
 
