@@ -705,9 +705,6 @@ EndFunction
 
 
 Function RemoveInventory()
-	int inventoryLostRNG = Utility.RandomInt(1, 100)
-	int invIndex = 0
-	int numItemsInInventory = 0
 	ObjectReference dest
 	
     if mcmOptions._inventoryPenalty <= 0
@@ -725,64 +722,38 @@ Function RemoveInventory()
 		return
 	endif
 
-    int numToLose = Utility.RandomInt(1, (player.GetNumItems() * mcmOptions._inventoryPenalty / 100.0) as int)
+    Form[] items = PO3_SKSEFunctions.AddAllItemsToArray(player, true, false, true)
+    ShuffleFormArray(items)
+    int numToLose = Utility.RandomInt(1, (items.Length * mcmOptions._inventoryPenalty / 100.0) as int)
 	int numLost = 0
-    while numLost < numToLose
-        invIndex = Utility.RandomInt(0, player.GetNumItems() - 1)
-        Form itemBase = player.GetNthForm(invIndex)
+    int invIndex = 0
+    while numLost < numToLose && invIndex < items.Length
+        Form itemBase = items[invIndex]
   
-		if player.IsEquipped(itemBase) 
-			; do nothing - item is equipped
-		elseif itemBase == gold 
+		if itemBase == gold 
 			; do nothing - item is gold
 		else
-			; not equipped, not gold
-            ; can't detct quest items until the item is removed from the player,
+            ; can't detect quest items until the item is removed from the player,
             ; since it's only then that we can get its objectreference
             player.RemoveItem(itemBase, player.GetItemCount(itemBase), true, dest)
+            numLost = numLost + 1
 		endif
-        numLost = numLost + 1
+        invIndex = invIndex + 1
     endwhile
+EndFunction
 
-	; while invIndex < player.GetNumItems()
-	; 	numItemsInInventory = player.GetNumItems()
-	; 	Form itemBase = player.GetNthForm(invIndex) 
-		
-	; 	if player.IsEquipped(itemBase) 
-	; 		; do nothing - item is equipped
-	; 	elseif itemBase == gold 
-	; 		; do nothing - item is gold
-	; 	else
-	; 		; not equipped, not gold
-	; 		if Utility.RandomInt(1, 100) < mcmOptions._inventoryPenalty
-	; 			int itemCount = player.GetItemCount(itemBase)
-	; 			int numToLose = Utility.RandomInt(1, itemCount)
-	; 			player.RemoveItem(itemBase, numToLose, true, dest)
-	; 			if player.GetNumItems() < numItemsInInventory
-	; 				; lost a whole item, so do not advance the index
-	; 				invIndex -= 1
-	; 			endif
-	; 		endif
-	; 	endif
-	; 	invIndex += 1
-	; endWhile
-	
-	; invIndex = itemsToLose.GetSize()
-	; debug.notification("Losing " + invIndex + " items into grave...")
-	; while invIndex > 0
-		; invIndex -= 1
-		; ObjectReference item = itemsToLose.GetAt(invIndex) as ObjectReference
-		; int numToLose = Utility.RandomInt(1, player.GetItemCount(item))
-		; debug.notification("Losing " + numToLose + "x " + item)
-		; player.RemoveItem(item, numToLose, false, lastEnemy)
-	; endwhile
-	
-	; if (inventoryLostRNG < mcmOptions._inventoryPenalty)
-		; player.RemoveAllItems(lastEnemy, false, false)
-		; player.RemoveAllItems()
-		; player.AddItem(defaultArmor)
-		; player.EquipItem(defaultArmor)
-	; EndIf
+
+Function ShuffleFormArray(Form[] arr)
+    ; Fisher-Yates shuffle algorithm
+    int index = arr.Length
+    Form tempForm 
+    while index > 0
+        int randomIndex = Utility.RandomInt(0, index - 1)
+        index = index - 1
+        tempForm = arr[index]
+        arr[index] = arr[randomIndex]
+        arr[randomIndex] = tempForm
+    endwhile
 EndFunction
 
 
@@ -998,7 +969,8 @@ Function ResetEnemy(Actor npc)
 	Utility.Wait(0.1)
 	npc.MoveToMyEditorLocation()
 	npc.SetUnconscious(false)
-
+    npc.EvaluatePackage()
+    
 	; may need to also reset the following Actor Values:
 	; Magicka, Stamina, HealRate, StaminaRate, MagickaRate
 	; AI stuff: Aggression, Confidence, Energy, Morality, Mood, Assistance, WaitingForPlayer
